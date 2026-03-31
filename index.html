@@ -2,19 +2,32 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<!-- Мобильная оптимизация: запрет масштабирования пальцами, точный viewport -->
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta name="mobile-web-app-capable" content="yes">
+
+<!-- ═══ VK MINI APP: обязательные мета-теги ═══════════════════════════════
+     user-scalable=no — запрет щипка-масштабирования в WebView ВКонтакте
+     viewport-fit=cover — под вырез экрана (iPhone X+)                    -->
+<meta name="viewport"
+      content="width=device-width, initial-scale=1.0,
+               maximum-scale=1.0, user-scalable=no,
+               viewport-fit=cover">
+<meta name="mobile-web-app-capable"       content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<!-- Иконка «Инженерный ЛОСь» на вкладке браузера -->
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%231a5080'/><text y='72' x='50' text-anchor='middle' font-size='64'>🚰</text></svg>">
-<title>ЛОС | Калькулятор устойчивости против всплытия</title>
+<meta name="theme-color"                  content="#1a5080">
+
+<!-- ═══ Иконка «Инженерный ЛОСь» на вкладке — встроенный SVG ═══════════ -->
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231a5080'/><text y='74' x='50' text-anchor='middle' font-size='62'>🚰</text></svg>">
+
+<title>ЛОС | Калькулятор устойчивости</title>
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Onest:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<!-- VK Bridge — официальный переходник для VK Mini Apps -->
+
+<!-- ═══ VK Bridge — официальный JS-мост. Подключаем в <head> чтобы был
+     готов к вызову .send() в конце <body>.                               -->
 <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
 
 <style>
+/* ─── СБРОС ──────────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
@@ -24,251 +37,296 @@
   --border:    #c8b89a;
   --border2:   #d8ccb8;
   --cyan:      #1a6fa8;
-  --cyan-dim:  rgba(26,111,168,0.10);
+  --cyan-dim:  rgba(26,111,168,.10);
   --green:     #1a7a40;
-  --green-dim: rgba(26,122,64,0.10);
+  --green-dim: rgba(26,122,64,.10);
   --red:       #c8152a;
-  --red-dim:   rgba(200,21,42,0.10);
+  --red-dim:   rgba(200,21,42,.10);
   --amber:     #b85c00;
-  --amber-dim: rgba(184,92,0,0.10);
+  --amber-dim: rgba(184,92,0,.10);
   --text:      #2a1f12;
-  --text-dim:  #7a6248;
+  --muted:     #7a6248;
   --mono:      'Space Mono', monospace;
-  --body-font: 'Onest', sans-serif;
+  --sans:      'Onest', sans-serif;
 }
 
+/* ─── BODY: фиксируем в 100vh без скролла ────────────────────────────
+   VK Mini App iframe имеет фиксированную высоту —
+   overflow:hidden гарантирует, что контент не уходит за рамки.        */
+html, body { height: 100%; overflow: hidden; }
 body {
-  font-family: var(--body-font);
+  font-family: var(--sans);
   background: var(--bg);
   color: var(--text);
-  height: 100vh;
-  padding: 8px 10px;
-  overflow: hidden;
+  padding: 6px 8px;
   display: flex;
   flex-direction: column;
+  touch-action: manipulation;          /* убираем задержку 300мс на тапах */
+  -webkit-tap-highlight-color: transparent;
 }
 
+/* Точечная сетка на фоне */
 body::before {
-  content:''; position:fixed; inset:0; z-index:0;
-  background-image: linear-gradient(rgba(100,70,30,0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(100,70,30,0.07) 1px, transparent 1px);
-  background-size: 40px 40px; pointer-events:none;
+  content: ''; position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(100,70,30,.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(100,70,30,.06) 1px, transparent 1px);
+  background-size: 36px 36px;
 }
 
-.wrap { position:relative; z-index:1; width:100%; margin:0 auto; height: 100%; display: flex; flex-direction: column; gap: 8px; }
+/* ─── ОБЁРТКА ───────────────────────────────────────────────────────── */
+.wrap {
+  position: relative; z-index: 1;
+  width: 100%; height: 100%;
+  display: flex; flex-direction: column; gap: 6px;
+}
 
-/* ── HEADER compact ── */
+/* ─── ШАПКА ─────────────────────────────────────────────────────────── */
 header {
-  display:flex; align-items:center; justify-content:space-between;
-  padding:7px 14px; border: 1px solid var(--border); border-radius: 10px;
-  background: var(--panel); flex-shrink: 0;
+  flex-shrink: 0;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 12px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
 }
-.logo-row { display:flex; align-items:center; gap:10px; }
+.logo-row { display: flex; align-items: center; gap: 9px; }
 .logo-icon {
-  width:34px; height:34px; border-radius:7px;
-  background: linear-gradient(135deg, #1a5080, #1a6fa8);
-  display:flex; align-items:center; justify-content:center;
-  font-size:18px; flex-shrink:0;
+  width: 32px; height: 32px; border-radius: 7px; flex-shrink: 0;
+  background: linear-gradient(135deg,#1a5080,#1a6fa8);
+  display: flex; align-items: center; justify-content: center; font-size: 17px;
 }
-.logo-text h1 { font-size:15px; font-weight:800; letter-spacing:-0.3px; line-height:1; }
-.logo-text p  { font-size:11px; color:var(--text-dim); margin-top:2px; }
+.logo-text h1 { font-size: 14px; font-weight: 800; line-height: 1; }
+.logo-text p  { font-size: 10px; color: var(--muted); margin-top: 1px; }
 .spring-badge {
-  display:flex; align-items:center; gap:5px;
+  display: flex; align-items: center; gap: 4px;
+  padding: 4px 9px; border-radius: 6px;
   background: var(--red-dim); border: 1px solid var(--red);
-  border-radius:6px; padding:5px 10px;
-  font-size:11px; font-weight:700; color:var(--red);
-  animation: pulse-red 2s ease-in-out infinite;
+  font-size: 10px; font-weight: 700; color: var(--red);
+  animation: pulse 2s ease-in-out infinite;
 }
-@keyframes pulse-red { 0%,100% { box-shadow:0 0 0 0 rgba(200,21,42,0.35); } 50% { box-shadow:0 0 0 5px rgba(200,21,42,0); } }
+@keyframes pulse {
+  0%,100% { box-shadow: 0 0 0 0 rgba(200,21,42,.35); }
+  50%      { box-shadow: 0 0 0 4px rgba(200,21,42,0); }
+}
 
-/* ── MAIN: 2 columns ── */
+/* ─── ДВУХКОЛОНОЧНЫЙ МАКЕТ ──────────────────────────────────────────── */
 .main {
-  display:grid; gap:8px;
-  grid-template-columns: 252px 1fr;
-  flex-grow: 1; min-height: 0;
+  flex: 1; min-height: 0;
+  display: grid;
+  grid-template-columns: 244px 1fr;
+  gap: 6px;
 }
 
-/* left column scrollable */
+/* ─── ЛЕВАЯ КОЛОНКА ─────────────────────────────────────────────────────
+   overflow:hidden — скроллбар физически не появится.
+   Все 4 карточки должны помещаться без прокрутки — это достигается
+   суммарной подгонкой паддингов и межстрочных отступов ниже.           */
 .left-col {
-  display:flex; flex-direction:column; gap:7px;
-  overflow-y:auto; padding-right:3px;
+  display: flex; flex-direction: column; gap: 5px;
+  overflow: hidden;
+  scrollbar-width: none; -ms-overflow-style: none;
 }
-.left-col::-webkit-scrollbar { width:4px; }
-.left-col::-webkit-scrollbar-thumb { background:var(--border); border-radius:2px; }
+.left-col::-webkit-scrollbar { display: none; }
 
-/* right column: canvas top, results strip bottom */
-.right-col {
-  display:flex; flex-direction:column; gap:7px; min-height:0;
-}
+/* ─── ПРАВАЯ КОЛОНКА ────────────────────────────────────────────────── */
+.right-col { display: flex; flex-direction: column; gap: 6px; min-height: 0; }
 
-/* ── CARDS ── */
+/* ─── КАРТОЧКИ ──────────────────────────────────────────────────────── */
 .card {
-  background:var(--panel); border:1px solid var(--border);
-  border-radius:10px; padding:10px 12px; flex-shrink:0;
+  flex-shrink: 0;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 9px;
+  padding: 6px 10px;
 }
 .card-title {
-  font-size:10px; font-weight:800; letter-spacing:1px; text-transform:uppercase;
-  color:var(--text-dim); margin-bottom:8px; padding-bottom:6px;
-  border-bottom:1px solid var(--border2);
+  font-size: 9px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 5px; padding-bottom: 4px;
+  border-bottom: 1px solid var(--border2);
 }
 
-/* ── BUTTONS ── */
-.presets { display:flex; gap:6px; margin-bottom:7px; }
+/* ─── КНОПКИ ────────────────────────────────────────────────────────── */
+.presets { display: flex; gap: 5px; margin-bottom: 4px; }
 .btn {
-  flex:1; padding:6px 8px; border-radius:6px; border:1px solid var(--border);
-  background:var(--surface); color:var(--text); font-family:var(--body-font);
-  font-size:12px; font-weight:700; cursor:pointer; transition:all .15s; white-space:nowrap;
+  flex: 1; padding: 5px 6px; border-radius: 5px; min-height: 30px;
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text); font-family: var(--sans);
+  font-size: 11px; font-weight: 700; cursor: pointer; white-space: nowrap;
+  transition: opacity .15s;
 }
-.btn.danger { border-color:var(--red); color:var(--red); }
-.btn.good   { border-color:var(--green); color:var(--green); }
-.btn.spring-btn { width:100%; background: linear-gradient(135deg,#f5e0e0,#eedada); border-color:var(--red); color:var(--red); font-size:12px; padding:6px 8px;}
-.btn.spring-btn.active { box-shadow: 0 0 10px rgba(200,21,42,0.2); }
+.btn:active { opacity: .7; }
+.btn.danger { border-color: var(--red);   color: var(--red);   }
+.btn.good   { border-color: var(--green); color: var(--green); }
+.btn.spring-btn {
+  width: 100%; margin-top: 4px;
+  background: linear-gradient(135deg,#f5e0e0,#eedada);
+  border-color: var(--red); color: var(--red);
+}
+.btn.spring-btn.active { box-shadow: 0 0 8px rgba(200,21,42,.2); }
 
-/* ── SLIDERS ── */
-.sliders { display:flex; flex-direction:column; gap:6px; }
-.slider-top { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:1px; }
-.slider-top label { font-size:11px; color:var(--text-dim); font-weight:600; }
-.slider-top span { font-family:var(--mono); font-size:12px; font-weight:700; }
-.slider-top span.cyan  { color:var(--cyan); }
-.slider-top span.green { color:var(--green); }
-.slider-top span.amber { color:var(--amber); }
+/* ─── ПОЛЗУНКИ ──────────────────────────────────────────────────────── */
+.sliders { display: flex; flex-direction: column; gap: 3px; }
+.sl-row  { display: flex; align-items: baseline; }
+.sl-lbl  { font-size: 10px; color: var(--muted); font-weight: 600; flex: 1; }
+.sl-val  { font-family: var(--mono); font-size: 11px; font-weight: 700; }
+.sl-val.c { color: var(--cyan);  }
+.sl-val.g { color: var(--green); }
+.sl-val.a { color: var(--amber); }
 
+/* touch-action:none — браузер не перехватывает касание на скролл.
+   Наш touchmove-обработчик в JS работает без задержек.                 */
 input[type="range"] {
-  width:100%; height:6px; border-radius:3px;
-  appearance:none; -webkit-appearance:none;
-  background:var(--border2); outline:none;
-  margin: 3px 0 4px 0;
+  display: block; width: 100%;
+  height: 5px; border-radius: 3px;
+  appearance: none; -webkit-appearance: none;
+  background: var(--border2); outline: none;
+  margin: 1px 0 3px;
+  touch-action: none;
 }
 input[type="range"]::-webkit-slider-thumb {
-  -webkit-appearance:none; width:16px; height:16px; border-radius:50%; cursor:pointer;
-  border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+  -webkit-appearance: none;
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.25); cursor: pointer;
 }
 input[type="range"]::-moz-range-thumb {
-  width:16px; height:16px; border-radius:50%; cursor:pointer;
-  border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+  width: 18px; height: 18px; border-radius: 50%;
+  border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.25); cursor: pointer;
+  border-style: solid;
 }
-input[type="range"].cyan-track::-webkit-slider-thumb  { background: var(--cyan); }
-input[type="range"].amber-track::-webkit-slider-thumb { background: var(--amber); }
-input[type="range"].green-track::-webkit-slider-thumb { background: var(--green); }
-input[type="range"].cyan-track::-moz-range-thumb  { background: var(--cyan); }
-input[type="range"].amber-track::-moz-range-thumb { background: var(--amber); }
-input[type="range"].green-track::-moz-range-thumb { background: var(--green); }
+input.c::-webkit-slider-thumb { background: var(--cyan);  }
+input.g::-webkit-slider-thumb { background: var(--green); }
+input.a::-webkit-slider-thumb { background: var(--amber); }
+input.c::-moz-range-thumb     { background: var(--cyan);  }
+input.g::-moz-range-thumb     { background: var(--green); }
+input.a::-moz-range-thumb     { background: var(--amber); }
 
-select { width:100%; padding:5px 8px; border-radius:5px; border:1px solid var(--border); background:var(--surface); font-size:11px; font-weight:600; outline:none; margin-bottom:7px; }
+/* ─── SELECT ────────────────────────────────────────────────────────── */
+select {
+  width: 100%; padding: 4px 7px; border-radius: 5px;
+  border: 1px solid var(--border); background: var(--surface);
+  font-size: 10px; font-weight: 600; outline: none; margin-bottom: 5px;
+}
 
-/* ── ANCHOR ── */
-.anchor-opts { display:flex; flex-direction:column; gap:4px; }
+/* ─── ЯКОРЕНИЕ ──────────────────────────────────────────────────────── */
+.anchor-opts { display: flex; flex-direction: column; gap: 3px; }
 .anchor-opt {
-  display:flex; align-items:center; gap:7px; padding:5px 8px; border-radius:5px;
-  border:1px solid var(--border2); background:var(--surface); cursor:pointer; font-size:11px; font-weight:600;
+  display: flex; align-items: center; gap: 6px; min-height: 27px;
+  padding: 3px 8px; border-radius: 5px;
+  border: 1px solid var(--border2); background: var(--surface);
+  cursor: pointer; font-size: 10px; font-weight: 600;
 }
-.anchor-opt input { accent-color:var(--cyan); width:14px; height:14px; cursor:pointer; }
-.anchor-opt.selected { border-color:var(--cyan); background:var(--cyan-dim); }
-.anchor-opt .aw { font-family:var(--mono); font-size:11px; font-weight:700; color:var(--cyan); margin-left:auto; }
+.anchor-opt input { accent-color: var(--cyan); width: 13px; height: 13px; flex-shrink: 0; }
+.anchor-opt.selected { border-color: var(--cyan); background: var(--cyan-dim); }
+.anchor-opt .aw { font-family: var(--mono); font-size: 10px; font-weight: 700; color: var(--cyan); margin-left: auto; }
 
-/* ── CANVAS area ── */
+/* ─── КАНВАС (главная картинка) ─────────────────────────────────────── */
 .canvas-card {
-  background:var(--panel); border:1px solid var(--border); border-radius:10px;
-  padding:8px; display:flex; flex-direction:column; gap:6px; flex:1; min-height:0;
+  flex: 1; min-height: 0;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 9px;
+  padding: 6px; display: flex; flex-direction: column; gap: 5px;
+}
+.canvas-header {
+  flex-shrink: 0; font-size: 9px; font-weight: 800;
+  letter-spacing: 1px; text-transform: uppercase; color: var(--muted);
 }
 #mainCanvas {
-  width:100%; flex:1; min-height:0;
-  border-radius:7px; border:1px solid var(--border2);
-  display:block; background:#e8dfd0;
+  flex: 1; min-height: 0; width: 100%;
+  border-radius: 6px; border: 1px solid var(--border2);
+  display: block; background: #e8dfd0;
 }
-.legend { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; font-size:11px; color:var(--text-dim); font-weight:500; flex-shrink:0; }
-.legend-item { display:flex; align-items:center; gap:4px; }
-.legend-dot { width:11px; height:11px; border-radius:2px; flex-shrink:0; }
+.legend {
+  flex-shrink: 0;
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 7px;
+  font-size: 10px; color: var(--muted); font-weight: 500;
+}
+.legend-item { display: flex; align-items: center; gap: 4px; }
+.legend-dot  { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
 
-/* ── RESULTS STRIP (bottom of right col) ── */
+/* ─── ПОЛОСА РЕЗУЛЬТАТОВ ─────────────────────────────────────────────── */
 .results-strip {
-  display:grid; grid-template-columns:200px 1fr 1fr; gap:7px; flex-shrink:0;
+  flex-shrink: 0;
+  display: grid; grid-template-columns: 190px 1fr 1fr; gap: 6px;
 }
 
-/* gauge card */
-.gauge-card { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:8px 10px; display:flex; flex-direction:column; gap:5px; }
-#gaugeCanvas { width:100%; height:auto; display:block; flex-shrink:0; }
-.status-box { border-radius:7px; padding:6px 9px; border:1px solid; }
-.status-box .status-k { font-family:var(--mono); font-size:20px; font-weight:700; float:right; line-height:1; }
-.status-box .status-title { font-size:12px; font-weight:800; margin-bottom:2px; }
-.status-box .status-desc  { font-size:10px; opacity:.9; line-height:1.3; clear:both; }
+/* Манометр */
+.gauge-card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 9px;
+  padding: 6px 9px; display: flex; flex-direction: column; gap: 4px;
+}
+#gaugeCanvas { width: 100%; height: auto; display: block; }
+.status-box   { border-radius: 6px; padding: 5px 8px; border: 1px solid; }
+.status-k     { font-family: var(--mono); font-size: 18px; font-weight: 700; float: right; line-height: 1; }
+.status-title { font-size: 11px; font-weight: 800; margin-bottom: 1px; }
+.status-desc  { font-size: 9px; opacity: .9; line-height: 1.3; clear: both; }
 
-/* forces card */
-.forces-card { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:8px 10px; display:flex; flex-direction:column; gap:4px; }
-.force-section { display:flex; flex-direction:column; gap:4px; flex:1; }
-.force-row { display:flex; align-items:center; gap:6px; }
-.force-label { font-size:10px; color:var(--text-dim); width:92px; flex-shrink:0; font-weight:600; }
-.force-bar-wrap { flex:1; height:11px; border-radius:3px; background:var(--surface); }
-.force-bar { height:100%; border-radius:3px; transition:width .4s; }
-.force-val { font-family:var(--mono); font-size:11px; width:46px; text-align:right; font-weight:700; }
+/* Эпюры */
+.forces-card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 9px;
+  padding: 6px 9px; display: flex; flex-direction: column; gap: 3px;
+}
+.force-section { display: flex; flex-direction: column; gap: 4px; flex: 1; }
+.force-row   { display: flex; align-items: center; gap: 5px; }
+.force-label { font-size: 9px; color: var(--muted); width: 85px; flex-shrink: 0; font-weight: 600; }
+.force-bar-w { flex: 1; height: 10px; border-radius: 3px; background: var(--surface); }
+.force-bar   { height: 100%; border-radius: 3px; transition: width .4s; }
+.force-val   { font-family: var(--mono); font-size: 10px; width: 42px; text-align: right; font-weight: 700; }
 
-/* net + skirt card */
-.net-card { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:8px 10px; display:flex; flex-direction:column; justify-content:space-between; }
-.net-row { display:flex; justify-content:space-between; align-items:center; padding:7px 10px; border-radius:6px; background:var(--surface); border:1px solid var(--border2); }
-.net-val { font-family:var(--mono); font-size:17px; font-weight:800; }
-.min-skirt-row {
-  display:flex; justify-content:space-between; align-items:center; padding:7px 10px; border-radius:6px;
-  background:var(--green-dim); border:1px solid rgba(26,122,64,0.3); font-size:11px; font-weight:600; margin-top:6px;
+/* Итог */
+.net-card {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 9px;
+  padding: 6px 9px; display: flex; flex-direction: column; gap: 5px;
+}
+.net-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 6px 9px; border-radius: 5px; background: var(--surface); border: 1px solid var(--border2);
+}
+.net-val { font-family: var(--mono); font-size: 16px; font-weight: 800; }
+.skirt-row {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 5px 9px; border-radius: 5px;
+  background: var(--green-dim); border: 1px solid rgba(26,122,64,.3);
+  font-size: 10px; font-weight: 600;
+}
+.note-box {
+  padding: 5px 8px; border-radius: 5px; background: var(--surface);
+  font-size: 9px; color: var(--muted); line-height: 1.5;
+}
+.sec-title {
+  font-size: 9px; font-weight: 800; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 3px;
 }
 
-.sec-title { font-size:10px; font-weight:800; letter-spacing:1px; text-transform:uppercase; color:var(--text-dim); margin-bottom:5px; }
-
-/* ── МОБИЛЬНАЯ ОПТИМИЗАЦИЯ ──
-   Ползунки в VK-приложении нужно делать крупнее и убирать
-   задержку 300мс на тач-события, иначе реагируют плохо.      */
-
-/* Убираем задержку тапа во всём приложении */
-* { touch-action: manipulation; }
-
-/* Ползунки — большой палец-захват, удобно на телефоне */
-input[type="range"] {
-  touch-action: none;          /* canvas-стиль захвата — без прокрутки страницы */
-  -webkit-tap-highlight-color: transparent;
-  cursor: pointer;
-}
-
-/* Большая зона касания для thumb на мобилке */
-@media (max-width: 800px) {
-  input[type="range"] { height: 8px; margin: 5px 0 6px 0; }
-  input[type="range"]::-webkit-slider-thumb { width: 24px; height: 24px; border-width: 3px; }
-  input[type="range"]::-moz-range-thumb    { width: 24px; height: 24px; border-width: 3px; }
-
-  /* На узких экранах переключаемся в одну колонку */
-  .main { grid-template-columns: 1fr; overflow-y: auto; }
-  .left-col { overflow-y: visible; }
-  .right-col { min-height: 520px; }
-  .results-strip { grid-template-columns: 1fr 1fr; }
+/* ─── МОБИЛЬНЫЙ БРЕЙКПОИНТ (телефоны < 700px) ──────────────────────── */
+@media (max-width: 700px) {
+  html, body    { height: auto; overflow: auto; }
+  body          { padding-bottom: env(safe-area-inset-bottom, 8px); }
+  .main         { grid-template-columns: 1fr; height: auto; }
+  .left-col     { overflow: visible; }
+  .right-col    { min-height: 460px; }
+  .results-strip{ grid-template-columns: 1fr 1fr; }
   .results-strip .net-card { grid-column: 1 / -1; }
-  body { height: auto; min-height: 100vh; overflow-y: auto; }
+  input[type="range"]::-webkit-slider-thumb { width: 24px; height: 24px; }
+  input[type="range"]::-moz-range-thumb     { width: 24px; height: 24px; }
 }
-
-/* Кнопки — антибликовость, большая зона */
-.btn, .anchor-opt {
-  -webkit-tap-highlight-color: transparent;
-  user-select: none;
-}
-/* Чекбокс/радио — увеличить зону касания */
-.anchor-opt input { flex-shrink: 0; }
-
 </style>
 </head>
 
 <body>
 <div class="wrap">
 
+<!-- ══ ШАПКА ══════════════════════════════════════════════════════════ -->
 <header>
   <div class="logo-row">
     <div class="logo-icon">🚰</div>
     <div class="logo-text">
-      <h1>ЛОС &mdash; Калькулятор устойчивости</h1>
-      <p>Полипропилен Викулен &bull; Закон Архимеда &bull; СП 32.13330</p>
+      <h1>ЛОС — Калькулятор устойчивости</h1>
+      <p>Полипропилен Викулен · Закон Архимеда · СП 32.13330.2018</p>
     </div>
   </div>
   <div class="spring-badge">🌊 ВЕСНА — ЗОНА РИСКА</div>
 </header>
 
+<!-- ══ ОСНОВНОЙ МАКЕТ ══════════════════════════════════════════════════ -->
 <div class="main">
 
-  <!-- LEFT: all controls -->
+  <!-- ── ЛЕВАЯ КОЛОНКА ── -->
   <div class="left-col">
 
     <div class="card">
@@ -277,27 +335,29 @@ input[type="range"] {
         <button class="btn danger" onclick="setPreset('barrel')">🛢 Чужая бочка</button>
         <button class="btn good"   onclick="setPreset('skirt')">🛡 Наш ЛОСь</button>
       </div>
-      <button class="btn spring-btn" id="springBtn" onclick="toggleSpring()">🌊 Симуляция паводка</button>
+      <button class="btn spring-btn" id="springBtn" onclick="toggleSpring()">
+        🌊 Симуляция паводка
+      </button>
     </div>
 
     <div class="card">
       <div class="card-title">Габариты корпуса</div>
       <div class="sliders">
         <div>
-          <div class="slider-top"><label>↔ Диаметр базы (D)</label><span class="cyan" id="v-d-body">—</span></div>
-          <input type="range" id="d-body" class="cyan-track" min="0.8" max="2.0" step="0.01" value="1.27" oninput="calc()">
+          <div class="sl-row"><span class="sl-lbl">↔ Диаметр базы (D)</span><span class="sl-val c" id="v-db">—</span></div>
+          <input type="range" class="c" id="d-body" min="0.8" max="2.0" step="0.01" value="1.27" oninput="calc()">
         </div>
         <div>
-          <div class="slider-top"><label>↕ Высота базы (H)</label><span class="cyan" id="v-h-body">—</span></div>
-          <input type="range" id="h-body" class="cyan-track" min="1.0" max="2.5" step="0.05" value="1.50" oninput="calc()">
+          <div class="sl-row"><span class="sl-lbl">↕ Высота базы (H)</span><span class="sl-val c" id="v-hb">—</span></div>
+          <input type="range" class="c" id="h-body" min="1.0" max="2.5" step="0.05" value="1.50" oninput="calc()">
         </div>
         <div>
-          <div class="slider-top"><label>↔ Диаметр горл. (d)</label><span class="cyan" id="v-d-neck">—</span></div>
-          <input type="range" id="d-neck" class="cyan-track" min="0.6" max="1.5" step="0.01" value="0.90" oninput="calc()">
+          <div class="sl-row"><span class="sl-lbl">↔ Диаметр горл. (d)</span><span class="sl-val c" id="v-dn">—</span></div>
+          <input type="range" class="c" id="d-neck" min="0.6" max="1.5" step="0.01" value="0.90" oninput="calc()">
         </div>
         <div>
-          <div class="slider-top"><label>↕ Высота горл. (h)</label><span class="cyan" id="v-h-neck">—</span></div>
-          <input type="range" id="h-neck" class="cyan-track" min="0.2" max="1.0" step="0.05" value="0.50" oninput="calc()">
+          <div class="sl-row"><span class="sl-lbl">↕ Высота горл. (h)</span><span class="sl-val c" id="v-hn">—</span></div>
+          <input type="range" class="c" id="h-neck" min="0.2" max="1.0" step="0.05" value="0.50" oninput="calc()">
         </div>
       </div>
     </div>
@@ -305,24 +365,24 @@ input[type="range"] {
     <div class="card">
       <div class="card-title">Грунт и юбка</div>
       <select id="soilType" onchange="calc()">
-        <option value="sand">Песок (ρ=1700)</option>
-        <option value="sandcement" selected>Пескоцемент (ρ=1850) ★</option>
-        <option value="loam">Суглинок (ρ=1800)</option>
-        <option value="clay">Глина (ρ=1900)</option>
-        <option value="fluid">🔴 Плывун (×0.25)</option>
+        <option value="sand">Песок (ρ = 1700 кг/м³)</option>
+        <option value="sandcement" selected>Пескоцемент (ρ = 1850) ★</option>
+        <option value="loam">Суглинок (ρ = 1800 кг/м³)</option>
+        <option value="clay">Глина (ρ = 1900 кг/м³)</option>
+        <option value="fluid">🔴 Плывун (сцепление ×0.25)</option>
       </select>
       <div class="sliders">
         <div>
-          <div class="slider-top"><label>💧 УГВ</label><span class="cyan" id="val-ugv">—</span></div>
-          <input type="range" id="ugv" class="cyan-track" min="0" max="3" step="0.05" value="1.5" oninput="calc()">
+          <div class="sl-row"><span class="sl-lbl">💧 УГВ</span><span class="sl-val c" id="val-ugv">—</span></div>
+          <input type="range" class="c" id="ugv" min="0" max="3" step="0.05" value="1.5" oninput="calc()">
         </div>
         <div>
-          <div class="slider-top"><label>🚿 Стоки внутри</label><span class="amber" id="val-water">—</span></div>
-          <input type="range" id="water" class="amber-track" min="0" max="2.5" step="0.05" value="0.5" oninput="calc()">
+          <div class="sl-row"><span class="sl-lbl">🚿 Стоки внутри</span><span class="sl-val a" id="val-water">—</span></div>
+          <input type="range" class="a" id="water" min="0" max="2.5" step="0.05" value="0.5" oninput="calc()">
         </div>
         <div>
-          <div class="slider-top"><label>⚓ Диаметр юбки</label><span class="green" id="val-base">—</span></div>
-          <input type="range" id="base" class="green-track" min="0.8" max="2.0" step="0.01" value="1.45" oninput="calc()">
+          <div class="sl-row"><span class="sl-lbl">⚓ Диаметр юбки</span><span class="sl-val g" id="val-base">—</span></div>
+          <input type="range" class="g" id="base" min="0.8" max="2.0" step="0.01" value="1.45" oninput="calc()">
         </div>
       </div>
     </div>
@@ -331,94 +391,91 @@ input[type="range"] {
       <div class="card-title">Доп. якорение</div>
       <div class="anchor-opts">
         <label class="anchor-opt selected" onclick="selectAnchor(this,'none')">
-          <input type="radio" name="anchor" value="none" checked><span>Без якоря</span><span class="aw">0</span>
+          <input type="radio" name="anchor" value="none" checked>
+          <span>Без якоря</span><span class="aw">0</span>
         </label>
         <label class="anchor-opt" onclick="selectAnchor(this,'straps')">
-          <input type="radio" name="anchor" value="straps"><span>Стропы</span><span class="aw">+80 кг</span>
+          <input type="radio" name="anchor" value="straps">
+          <span>Стропы</span><span class="aw">+80 кг</span>
         </label>
         <label class="anchor-opt" onclick="selectAnchor(this,'belt')">
-          <input type="radio" name="anchor" value="belt"><span>Бетонный пояс</span><span class="aw">+180 кг</span>
+          <input type="radio" name="anchor" value="belt">
+          <span>Бетонный пояс</span><span class="aw">+180 кг</span>
         </label>
       </div>
     </div>
 
   </div><!-- /left-col -->
 
-  <!-- RIGHT: canvas (big) + results strip -->
+  <!-- ── ПРАВАЯ КОЛОНКА ── -->
   <div class="right-col">
 
     <div class="canvas-card">
-      <div style="display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
-        <span style="font-size:10px;font-weight:800;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;">Инженерный разрез — земля и котлован</span>
-      </div>
-      <canvas id="mainCanvas" width="700" height="480"></canvas>
+      <div class="canvas-header">Инженерный разрез — земля и котлован</div>
+      <canvas id="mainCanvas" width="700" height="460"></canvas>
       <div class="legend">
-        <div class="legend-item"><div class="legend-dot" style="background:rgba(20,130,200,0.5)"></div>УГВ</div>
-        <div class="legend-item"><div class="legend-dot" style="background:rgba(20,70,180,0.70)"></div>Стоки</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(20,130,200,.45)"></div>УГВ</div>
+        <div class="legend-item"><div class="legend-dot" style="background:rgba(20,70,180,.65)"></div>Стоки</div>
         <div class="legend-item"><div class="legend-dot" style="background:#00c060"></div>Грунтозацеп</div>
         <div class="legend-item"><div class="legend-dot" style="background:#7a9eae"></div>Корпус ПП</div>
       </div>
     </div>
 
-    <!-- Results strip: 3 compact blocks side by side -->
     <div class="results-strip">
 
-      <!-- Gauge + status -->
       <div class="gauge-card">
         <div class="sec-title">Запас прочности K</div>
-        <canvas id="gaugeCanvas" width="220" height="115"></canvas>
+        <canvas id="gaugeCanvas" width="210" height="108"></canvas>
         <div class="status-box" id="statusBox">
-          <span class="status-k" id="statusK">—</span>
-          <div class="status-title" id="statusTitle">—</div>
-          <div class="status-desc" id="statusDesc">—</div>
+          <span class="status-k"    id="statusK">—</span>
+          <div  class="status-title" id="statusTitle">—</div>
+          <div  class="status-desc"  id="statusDesc">—</div>
         </div>
       </div>
 
-      <!-- Force bars -->
       <div class="forces-card">
         <div class="sec-title">Эпюры нагрузок</div>
         <div class="force-section">
           <div class="force-row">
             <div class="force-label">↑ Выталкивание</div>
-            <div class="force-bar-wrap"><div class="force-bar" id="bar-arch" style="background:#1a6fa8;width:0%"></div></div>
-            <div class="force-val" style="color:var(--cyan)" id="res-arch">0</div>
+            <div class="force-bar-w"><div class="force-bar" id="bar-arch"  style="background:#1a6fa8;width:0%"></div></div>
+            <div class="force-val" style="color:var(--cyan)"  id="res-arch">0</div>
           </div>
           <div class="force-row">
             <div class="force-label">↓ Масса пластика</div>
-            <div class="force-bar-wrap"><div class="force-bar" id="bar-corp" style="background:#4a7090;width:0%"></div></div>
-            <div class="force-val" style="color:#4a7090" id="res-corp">—</div>
+            <div class="force-bar-w"><div class="force-bar" id="bar-corp"  style="background:#4a7090;width:0%"></div></div>
+            <div class="force-val" style="color:#4a7090"     id="res-corp">—</div>
           </div>
           <div class="force-row">
             <div class="force-label">↓ Масса стоков</div>
-            <div class="force-bar-wrap"><div class="force-bar" id="bar-water" style="background:#b88c00;width:0%"></div></div>
+            <div class="force-bar-w"><div class="force-bar" id="bar-water" style="background:#b88c00;width:0%"></div></div>
             <div class="force-val" style="color:var(--amber)" id="res-water">0</div>
           </div>
           <div class="force-row">
             <div class="force-label">↓ Прижим грунта</div>
-            <div class="force-bar-wrap"><div class="force-bar" id="bar-soil" style="background:#1a7a40;width:0%"></div></div>
+            <div class="force-bar-w"><div class="force-bar" id="bar-soil"  style="background:#1a7a40;width:0%"></div></div>
             <div class="force-val" style="color:var(--green)" id="res-soil">0</div>
           </div>
           <div class="force-row" id="anchorRow" style="display:none">
             <div class="force-label">↓ Якорь</div>
-            <div class="force-bar-wrap"><div class="force-bar" id="bar-anchor" style="background:#8c4a10;width:0%"></div></div>
-            <div class="force-val" style="color:#c08040" id="res-anchor">0</div>
+            <div class="force-bar-w"><div class="force-bar" id="bar-anchor" style="background:#8c4a10;width:0%"></div></div>
+            <div class="force-val" style="color:#c08040"     id="res-anchor">0</div>
           </div>
         </div>
       </div>
 
-      <!-- Net force + min skirt -->
       <div class="net-card">
         <div class="sec-title">Итог</div>
         <div class="net-row">
-          <span style="font-size:12px;font-weight:700;color:var(--text-dim);">Результирующая</span>
+          <span style="font-size:10px;font-weight:700;color:var(--muted)">Результирующая</span>
           <span class="net-val" id="res-net">0 кг</span>
         </div>
-        <div class="min-skirt-row">
-          <span>Мин. юбка (K=1.5):</span>
-          <span style="font-family:var(--mono);font-weight:800;font-size:15px;color:var(--green);" id="minSkirt">— м</span>
+        <div class="skirt-row">
+          <span>Мин. юбка K=1.5:</span>
+          <span style="font-family:var(--mono);font-size:14px;font-weight:800;color:var(--green)" id="minSkirt">—</span>
         </div>
-        <div style="margin-top:8px;padding:8px;border-radius:6px;background:var(--surface);font-size:10px;color:var(--text-dim);line-height:1.5;">
-          Полипропилен Викулен<br>стенки 8/5 мм &bull; ρ<sub>PP</sub>=910 кг/м³
+        <div class="note-box">
+          Полипропилен Викулен<br>стенки 8/5 мм · ρ<sub>PP</sub> = 910 кг/м³
         </div>
       </div>
 
@@ -430,327 +487,380 @@ input[type="range"] {
 </div><!-- /wrap -->
 
 <script>
-const RHO_W = 1000;
-const SOIL = {
-  sand: {rho:1700, kf:1.0, l:'Песок'}, sandcement: {rho:1850, kf:1.0, l:'Пескоцемент'},
-  loam: {rho:1800, kf:0.9, l:'Суглинок'}, clay: {rho:1900, kf:0.85, l:'Глина'},
-  fluid: {rho:1500, kf:0.25, l:'Плывун'}
-};
-const ANCHOR = { none:0, straps:80, belt:180, slab:620 };
-
-let springActive = false, springRaf = null, springTime = 0, currentAnchor = 'none';
-let waterPhase = 0, lastNet = 0, smoothOffset = 0;
-
-const els = {
-  dBody: document.getElementById('d-body'), hBody: document.getElementById('h-body'),
-  dNeck: document.getElementById('d-neck'), hNeck: document.getElementById('h-neck'),
-  vDBody: document.getElementById('v-d-body'), vHBody: document.getElementById('v-h-body'),
-  vDNeck: document.getElementById('v-d-neck'), vHNeck: document.getElementById('v-h-neck'),
-  ugv: document.getElementById('ugv'), water: document.getElementById('water'), base: document.getElementById('base'),
-  soilType: document.getElementById('soilType'), vUgv: document.getElementById('val-ugv'), vWater: document.getElementById('val-water'),
-  vBase: document.getElementById('val-base'), resArch: document.getElementById('res-arch'), resCorp: document.getElementById('res-corp'),
-  resWater: document.getElementById('res-water'), resSoil: document.getElementById('res-soil'), resAnchor: document.getElementById('res-anchor'),
-  resNet: document.getElementById('res-net'), barArch: document.getElementById('bar-arch'), barCorp: document.getElementById('bar-corp'),
-  barWater: document.getElementById('bar-water'), barSoil: document.getElementById('bar-soil'), barAnchor: document.getElementById('bar-anchor'),
-  anchorRow: document.getElementById('anchorRow'), statusBox: document.getElementById('statusBox'), statusK: document.getElementById('statusK'),
-  statusTitle: document.getElementById('statusTitle'), statusDesc: document.getElementById('statusDesc'), minSkirt: document.getElementById('minSkirt'),
-  springBtn: document.getElementById('springBtn'), mainC: document.getElementById('mainCanvas'), gaugeC: document.getElementById('gaugeCanvas'),
-};
-const ctx = els.mainC.getContext('2d'), gctx = els.gaugeC.getContext('2d');
-
-function toggleSpring(){
-  springActive = !springActive;
-  els.springBtn.classList.toggle('active', springActive);
-  els.springBtn.textContent = springActive ? '⏹ Остановить симуляцию' : '🌊 Симуляция паводка';
-  if(springActive) animateSpring(); else cancelAnimationFrame(springRaf);
-}
-function animateSpring(){
-  const H_TOTAL = +els.hBody.value + +els.hNeck.value;
-  springTime += 0.012; els.ugv.value = Math.max(0, Math.min(H_TOTAL+0.2, (H_TOTAL/2) + (H_TOTAL/2) * Math.sin(springTime)));
-  calc(); springRaf = requestAnimationFrame(animateSpring);
-}
-function setPreset(t){
-  if(springActive) toggleSpring();
-  if(t==='barrel'){ 
-    els.dBody.value=1.50; els.hBody.value=1.50; els.dNeck.value=0.90; els.hNeck.value=0.50;
-    els.ugv.value=2.0; els.water.value=0; els.base.value=1.50; els.soilType.value='sand'; selectAnchorByVal('none'); 
-  } else { 
-    els.dBody.value=1.27; els.hBody.value=1.50; els.dNeck.value=0.90; els.hNeck.value=0.50;
-    els.ugv.value=1.8; els.water.value=0.3; els.base.value=1.45; els.soilType.value='sandcement'; selectAnchorByVal('none'); 
-  }
-  calc();
-}
-function selectAnchor(l, v){ document.querySelectorAll('.anchor-opt').forEach(e=>e.classList.remove('selected')); l.classList.add('selected'); currentAnchor=v; calc(); }
-function selectAnchorByVal(v){ document.querySelectorAll('.anchor-opt').forEach(e=>{ const i=e.querySelector('input'); if(i.value===v){e.classList.add('selected');i.checked=true;}else e.classList.remove('selected'); }); currentAnchor=v; }
-
-function calc(){
-  const D_BODY = +els.dBody.value, H_BODY = +els.hBody.value;
-  const D_NECK = +els.dNeck.value, H_NECK = +els.hNeck.value;
-  const H_TOTAL = H_BODY + H_NECK;
-  
-  els.base.min = D_BODY;
-  if(+els.base.value < D_BODY) els.base.value = D_BODY;
-  
-  els.ugv.max = H_TOTAL + 0.5;
-  els.water.max = H_TOTAL;
-
-  const ugv = +els.ugv.value, water = +els.water.value, base = +els.base.value, soil = SOIL[els.soilType.value];
-  
-  els.vDBody.textContent = D_BODY.toFixed(2); els.vHBody.textContent = H_BODY.toFixed(2);
-  els.vDNeck.textContent = D_NECK.toFixed(2); els.vHNeck.textContent = H_NECK.toFixed(2);
-  els.vUgv.textContent = ugv.toFixed(2)+' м'; els.vWater.textContent = water.toFixed(2)+' м'; els.vBase.textContent = base.toFixed(2)+' м';
-  
-  const S_BODY = Math.PI*(D_BODY/2)**2;
-  const S_NECK = Math.PI*(D_NECK/2)**2;
-  const sBase = Math.PI*(base/2)**2, sSkirt = Math.max(0, sBase-S_BODY);
-  
-  const areaTotal = Math.PI*D_BODY*H_BODY + Math.PI*D_NECK*H_NECK + 2*S_BODY;
-  const MASS_PP = Math.round(areaTotal * 20); 
-
-  let vSub = 0;
-  if(ugv<=H_BODY) vSub = S_BODY*ugv; else if(ugv<=H_TOTAL) vSub = S_BODY*H_BODY + S_NECK*(ugv-H_BODY); else vSub = S_BODY*H_BODY + S_NECK*H_NECK;
-  
-  const fArch = vSub*RHO_W;
-  let waterVol = 0;
-  if(water<=H_BODY) waterVol = S_BODY*water; else waterVol = S_BODY*H_BODY + S_NECK*(water-H_BODY);
-  
-  const fWater = waterVol*RHO_W; 
-  const fSoil = sSkirt*H_TOTAL*soil.rho*soil.kf;
-  const fAnchor = ANCHOR[currentAnchor];
-  
-  const fDown = MASS_PP + fWater + fSoil + fAnchor;
-  const netForce = fArch - fDown;
-  const K = fArch>0 ? fDown/fArch : 99; lastNet = netForce;
-
-  const fReq = 1.5*fArch, fSneed = fReq - MASS_PP - fWater - fAnchor;
-  let mSk = 'н/д';
-  if(fSneed>0 && soil.kf>0){ const d = Math.sqrt(4*(fSneed/(H_TOTAL*soil.rho*soil.kf)+S_BODY)/Math.PI); mSk = d<=3.0 ? d.toFixed(2) : '> 3.0'; }
-  else if(fSneed<=0) mSk = '≤ ' + D_BODY.toFixed(2);
-
-  const maxF = Math.max(fArch, fDown, 500)*1.05, pct = f => Math.min(100, Math.round(f/maxF*100))+'%';
-  els.resArch.textContent=Math.round(fArch); els.resCorp.textContent=MASS_PP; els.resWater.textContent=Math.round(fWater); els.resSoil.textContent=Math.round(fSoil); els.resAnchor.textContent=fAnchor;
-  els.barArch.style.width=pct(fArch); els.barCorp.style.width=pct(MASS_PP); els.barWater.style.width=pct(fWater); els.barSoil.style.width=pct(fSoil); els.barAnchor.style.width=pct(fAnchor);
-  els.anchorRow.style.display = fAnchor>0 ? 'flex' : 'none';
-  els.resNet.textContent = (netForce>0?'↑ ':'↓ ') + Math.abs(Math.round(netForce))+' кг'; 
-  els.minSkirt.textContent = mSk + (mSk==='н/д'?'':' м');
-
-  if(K<1.0) setSt('red',K,'🔴 ВСПЛЫВЁТ','Архимед победил. Отрыв труб.');
-  else if(K<1.2) setSt('amber',K,'🟠 НА ГРАНИ','Может выдавить при паводке.');
-  else if(K<1.5) setSt('cyan',K,'🔵 ДОПУСТИМО','По нормативам, но без запаса.');
-  else setSt('green',K,'🟢 СТАБИЛЬНО','Надежно зафиксировано грунтом.');
-  drawG(K);
-}
-
-function setSt(col,K,t,d){
-  const c = {red:['var(--red)','var(--red-dim)','rgba(200,21,42,0.5)'], amber:['var(--amber)','var(--amber-dim)','rgba(184,92,0,0.5)'], cyan:['var(--cyan)','var(--cyan-dim)','rgba(26,111,168,0.5)'], green:['var(--green)','var(--green-dim)','rgba(26,122,64,0.5)']}[col];
-  els.statusBox.style.cssText = `border-color:${c[2]};background:${c[1]};`; els.statusK.textContent=K.toFixed(2); els.statusK.style.color=c[0];
-  els.statusTitle.textContent=t; els.statusTitle.style.color=c[0]; els.statusDesc.textContent=d;
-}
-
-function drawG(K){
-  const c=gctx; c.clearRect(0,0,220,115); const cx=110, cy=105, r=88, r2=62, sA=Math.PI, eA=2*Math.PI, Km=3.0;
-  [[0,0.5,'#c8152a'],[0.5,0.75,'#e05020'],[0.75,1.0,'#b85c00'],[1.0,1.2,'#88cc00'],[1.2,1.5,'#1a6fa8'],[1.5,3.0,'#1a7a40']].forEach(([z0,z1,col])=>{
-    const a0=sA+(z0/Km)*Math.PI, a1=sA+(z1/Km)*Math.PI; c.beginPath(); c.arc(cx,cy,r,a0,a1); c.arc(cx,cy,r2,a1,a0,true);
-    c.fillStyle=col; c.globalAlpha=0.25; c.fill(); c.globalAlpha=1; c.strokeStyle=col; c.lineWidth=2; c.beginPath(); c.arc(cx,cy,r+2,a0,a1); c.stroke();
-  });
-  c.beginPath(); c.arc(cx,cy,r2-2,sA,eA); c.arc(cx,cy,r+4,eA,sA,true); c.fillStyle='#fdf9f2'; c.fill();
-  for(let k=0;k<=3;k+=0.5){
-    const a=sA+(k/Km)*Math.PI; c.beginPath(); c.moveTo(cx+(r+6)*Math.cos(a),cy+(r+6)*Math.sin(a)); c.lineTo(cx+(r-4)*Math.cos(a),cy+(r-4)*Math.sin(a));
-    c.strokeStyle='#a09070'; c.lineWidth=1.5; c.stroke(); c.fillStyle='#6a5030'; c.font='bold 11px monospace'; c.textAlign='center'; c.fillText(k.toFixed(1),cx+(r2-16)*Math.cos(a),cy+(r2-16)*Math.sin(a)+4);
-  }
-  const nA=sA+(Math.min(Km,Math.max(0,K))/Km)*Math.PI, nC = K<1?'#c8152a':K<1.2?'#b85c00':K<1.5?'#1a6fa8':'#1a7a40';
-  c.save(); c.translate(cx,cy); c.rotate(nA); c.beginPath(); c.moveTo(-6,0); c.lineTo(0,-(r-10)); c.lineTo(6,0); c.fillStyle=nC; c.fill(); c.restore();
-  c.beginPath(); c.arc(cx,cy,10,0,2*Math.PI); c.fillStyle='#fdf9f2'; c.strokeStyle=nC; c.lineWidth=2; c.fill(); c.stroke();
-}
-
-function drawM(){
-  const D_BODY = +els.dBody.value, H_BODY = +els.hBody.value;
-  const D_NECK = +els.dNeck.value, H_NECK = +els.hNeck.value;
-  const H_TOTAL = H_BODY + H_NECK;
-  const ugv=+els.ugv.value, water=+els.water.value, base=+els.base.value;
-  
-  const W=700, H=480; ctx.clearRect(0,0,W,H);
-  
-  const SCX=130, SCY=130, cx=W/2, gY=420;
-  const surfY = gY - (H_TOTAL * SCY); 
-  
-  smoothOffset += ((lastNet>0 ? -Math.min(lastNet/40,45) : Math.min(Math.abs(lastNet)/600,8)) - smoothOffset)*0.08; const ofs=smoothOffset;
-  const wB=D_BODY*SCX, wN=D_NECK*SCX, wBs=base*SCX, hB=H_BODY*SCY, hN=H_NECK*SCY;
-  const yBs=gY+ofs, yBt=yBs-hB, yNt=yBt-hN;
-
-  // НЕБО
-  const skyG=ctx.createLinearGradient(0,0,0,surfY); 
-  skyG.addColorStop(0,'#d0e6ec'); skyG.addColorStop(1,'#f5f0e8'); 
-  ctx.fillStyle=skyG; ctx.fillRect(0,0,W,surfY);
-  
-  ctx.beginPath(); ctx.arc(80, 60, 24, 0, Math.PI*2);
-  ctx.fillStyle='rgba(230, 180, 50, 0.8)'; ctx.fill();
-  ctx.strokeStyle='rgba(230, 180, 50, 0.3)'; ctx.lineWidth=3;
-  for(let i=0; i<8; i++){ let a = i*Math.PI/4; ctx.beginPath(); ctx.moveTo(80+Math.cos(a)*32, 60+Math.sin(a)*32); ctx.lineTo(80+Math.cos(a)*45, 60+Math.sin(a)*45); ctx.stroke(); }
-  
-  ctx.fillStyle='rgba(255,255,255,0.7)';
-  ctx.beginPath(); ctx.arc(180, 50, 18, 0, Math.PI*2); ctx.arc(205, 45, 24, 0, Math.PI*2); ctx.arc(230, 50, 16, 0, Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(480, 80, 14, 0, Math.PI*2); ctx.arc(500, 75, 20, 0, Math.PI*2); ctx.arc(520, 80, 12, 0, Math.PI*2); ctx.fill();
-
-  // МАТЕРИКОВЫЙ ГРУНТ
-  const soilG=ctx.createLinearGradient(0,surfY,0,H); 
-  soilG.addColorStop(0,'#7d6347'); soilG.addColorStop(1,'#473623');
-  ctx.fillStyle=soilG; ctx.fillRect(0,surfY,W,H-surfY);
-  ctx.fillStyle='rgba(0,0,0,0.06)';
-  for(let x=10;x<W;x+=15) for(let y=surfY+10;y<H;y+=15){ ctx.beginPath();ctx.arc(x+(y%4)*3,y,1.5,0,2*Math.PI);ctx.fill(); }
-
-  // КОТЛОВАН
-  const pitW = Math.max(wBs + 80, 320);
-  const pL = cx - pitW/2, pR = cx + pitW/2;
-  const pitG=ctx.createLinearGradient(0,surfY,0,gY);
-  pitG.addColorStop(0,'#a88e6a'); pitG.addColorStop(1,'#876d49');
-  ctx.fillStyle=pitG;
-  ctx.beginPath(); ctx.moveTo(pL-25, surfY); ctx.lineTo(pL, gY+15); ctx.lineTo(pR, gY+15); ctx.lineTo(pR+25, surfY); ctx.closePath(); ctx.fill();
-  ctx.fillStyle='rgba(255,255,255,0.07)';
-  for(let x=pL-10;x<pR+10;x+=12) for(let y=surfY+10;y<gY;y+=14){ ctx.beginPath();ctx.arc(x+(y%3)*4,y,2,0,2*Math.PI);ctx.fill(); }
-  
-  ctx.beginPath(); ctx.moveTo(pL-25, surfY); ctx.lineTo(pL, gY+15); ctx.lineTo(pR, gY+15); ctx.lineTo(pR+25, surfY);
-  ctx.strokeStyle='rgba(50,30,15,0.3)'; ctx.lineWidth=2; ctx.stroke();
-
-  // ТРАВА
-  ctx.beginPath(); ctx.moveTo(0, surfY); ctx.lineTo(W, surfY);
-  ctx.strokeStyle='#7b8c42'; ctx.lineWidth=4; ctx.stroke();
-  ctx.strokeStyle='#687834'; ctx.lineWidth=1.5;
-  for(let i=10; i<W; i+=18) {
-     if(i > cx-10 && i < cx+10) continue;
-     ctx.beginPath(); ctx.moveTo(i, surfY); ctx.lineTo(i-3, surfY-5-(i%3)); ctx.stroke();
-     ctx.beginPath(); ctx.moveTo(i+3, surfY); ctx.lineTo(i+5, surfY-4-(i%2)); ctx.stroke();
-  }
-
-  // УГВ
-  if(ugv>0){
-    const yU = gY - ugv*SCY;
-    const wG = ctx.createLinearGradient(0,yU,0,gY);
-    wG.addColorStop(0,'rgba(14, 165, 233, 0.25)'); wG.addColorStop(1,'rgba(14, 165, 233, 0.45)');
-    ctx.fillStyle=wG; ctx.fillRect(0, yU, W, H-yU);
-    
-    waterPhase+=0.025; ctx.beginPath(); ctx.moveTo(0,yU); 
-    for(let x=0;x<=W;x+=4) ctx.lineTo(x, yU+Math.sin(x*0.04+waterPhase)*1.5+Math.sin(x*0.07+waterPhase*1.3)*0.8);
-    ctx.lineTo(W,gY); ctx.lineTo(0,gY); ctx.fillStyle='rgba(14, 165, 233, 0.1)'; ctx.fill();
-    
-    ctx.setLineDash([6,4]); ctx.strokeStyle='rgba(14, 165, 233, 0.7)'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(0,yU); ctx.lineTo(W,yU); ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle='rgba(10, 80, 140, 1)'; ctx.font='bold 15px Onest, sans-serif'; ctx.fillText(`УГВ: ${ugv.toFixed(2)} м`, 15, yU-8);
-  }
-  
-  ctx.fillStyle='rgba(50,30,15,0.8)'; ctx.font='bold 13px Onest, sans-serif'; ctx.textAlign='right';
-  ctx.fillText('▼ Уровень земли', W-15, surfY-8);
-  ctx.setLineDash([2,4]); ctx.strokeStyle='rgba(50,30,15,0.4)'; ctx.beginPath(); ctx.moveTo(0,gY); ctx.lineTo(W,gY); ctx.stroke(); ctx.setLineDash([]);
-  ctx.fillText('Дно котлована', W-15, gY-6);
-  ctx.textAlign='center';
-  
-  // ЮБКА
-  if(base>D_BODY+0.01){ ctx.fillStyle='#00c060'; ctx.fillRect(cx-wBs/2,yBs-10+ofs,wBs,10); ctx.fillStyle='rgba(0,255,120,0.15)'; ctx.fillRect(cx-wBs/2,yBs-10+ofs,wBs,3); }
-  
-  // КОРПУС
-  const bGr=ctx.createLinearGradient(cx-wB/2,0,cx+wB/2,0); bGr.addColorStop(0,'#8aabb8'); bGr.addColorStop(0.5,'#b8d0da'); bGr.addColorStop(1,'#7a9eae');
-  ctx.fillStyle=bGr; ctx.fillRect(cx-wB/2,yBt,wB,hB); ctx.strokeStyle='#506878'; ctx.lineWidth=2; ctx.strokeRect(cx-wB/2,yBt,wB,hB);
-  
-  // ВОДА ВНУТРИ
-  if(water>0.02){
-    let yW=yBs-water*SCY;
-    if (yW < yNt) yW = yNt; // Защита от переполнения выше горловины
-    const iG=ctx.createLinearGradient(0,yW,0,yBs); iG.addColorStop(0,'rgba(30,120,220,0.45)'); iG.addColorStop(1,'rgba(20,70,180,0.70)');
-    
-    // Рисуем воду в основном корпусе
-    const hWaterBody = Math.min(water, H_BODY);
-    if(hWaterBody > 0) {
-      ctx.fillStyle=iG; ctx.fillRect(cx-wB/2+3, yBs-hWaterBody*SCY, wB-6, hWaterBody*SCY-2);
-    }
-    // Рисуем воду в горловине если есть
-    if(water > H_BODY) {
-      const hWaterNeck = water - H_BODY;
-      ctx.fillStyle=iG; ctx.fillRect(cx-wN/2+3, yW, wN-6, hWaterNeck*SCY);
-    }
-    
-    // Волна
-    const currentW = water > H_BODY ? wN : wB;
-    ctx.strokeStyle='rgba(80,160,255,0.5)'; ctx.lineWidth=1; ctx.beginPath(); 
-    for(let x=cx-currentW/2+3; x<cx+currentW/2-3; x++){ 
-      const wy=yW+Math.sin(x*0.12+waterPhase*1.5)*1.2; 
-      x===Math.floor(cx-currentW/2+3)?ctx.moveTo(x,wy):ctx.lineTo(x,wy); 
-    } 
-    ctx.stroke();
-  }
-  
-  // ГОРЛОВИНА
-  const nGr=ctx.createLinearGradient(cx-wN/2,0,cx+wN/2,0); nGr.addColorStop(0,'#7898a8'); nGr.addColorStop(0.5,'#a0c0cc'); nGr.addColorStop(1,'#6a8898');
-  ctx.fillStyle=nGr; ctx.fillRect(cx-wN/2,yNt,wN,hN); ctx.strokeStyle='#506878'; ctx.lineWidth=2; ctx.strokeRect(cx-wN/2,yNt,wN,hN);
-  ctx.fillStyle='#6a8898'; ctx.fillRect(cx-wN/2-10,yNt-14,wN+20,14); ctx.strokeRect(cx-wN/2-10,yNt-14,wN+20,14);
-  
-  // СТРЕЛКИ
-  const fA=parseFloat(els.resArch.textContent)||0, fW=parseFloat(els.resWater.textContent)||0, fS=parseFloat(els.resSoil.textContent)||0, AS=0.015;
-  const arr=(x,y,u,l,c,t)=>{
-    if(l<4)return; const eY=u?y-l:y+l; ctx.strokeStyle=c; ctx.lineWidth=2.5; ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x,eY); ctx.stroke();
-    ctx.beginPath(); const d=u?-8:8; ctx.moveTo(x,eY); ctx.lineTo(x-6,eY-d); ctx.lineTo(x+6,eY-d); ctx.fillStyle=c; ctx.fill();
-    if(t){ ctx.font='bold 14px monospace'; ctx.textAlign='center'; ctx.fillText(t,x,u?eY-10:eY+18); }
-  };
-  if(fA>10) arr(cx-wB/2-35,yBs,true,Math.min(fA*AS,120),'#1a6fa8',Math.round(fA)+' кг');
-  if(fW>10) arr(cx,yBt+20,false,Math.min(fW*AS,80),'#3050c0',Math.round(fW)+' кг');
-  if(fS>10 && base>D_BODY+0.01){ const l=Math.min(fS*AS*0.5,90); arr(cx+wB/2+(wBs-wB)/4,yBs-30,false,l,'#1a7a40',Math.round(fS)+' кг'); arr(cx-wB/2-(wBs-wB)/4,yBs-30,false,l,'#1a7a40',''); }
-  
-  // РАЗМЕРЫ
-  const dL=(x1,y1,x2,y2,t)=>{
-    ctx.beginPath(); ctx.strokeStyle='rgba(50,30,15,0.4)'; ctx.lineWidth=1.5; ctx.setLineDash([4,4]); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); ctx.setLineDash([]);
-    ctx.fillStyle='rgba(50,30,15,0.8)'; ctx.font='bold 14px monospace'; ctx.textAlign='center'; ctx.fillText(t,(x1+x2)/2,y1+18);
-  };
-  dL(cx-wBs/2, yBs+25, cx+wBs/2, yBs+25, `⌀ ${base.toFixed(2)} м`);
-}
-function loop(){ drawM(); requestAnimationFrame(loop); }
-calc(); loop();
-
-// ── VK BRIDGE ИНИЦИАЛИЗАЦИЯ ────────────────────────────────────────────────
-// Отправляем сигнал ВКонтакте, что приложение загружено и готово к работе.
-// Без этого VK Mini App показывает экран загрузки бесконечно.
+/* ══════════════════════════════════════════════════════════════════════
+   VK BRIDGE: сигнал «приложение готово» — скрывает splash-экран ВК.
+   ════════════════════════════════════════════════════════════════════ */
 if (typeof vkBridge !== 'undefined') {
   vkBridge.send('VKWebAppInit');
 }
 
-// ── TOUCH-ПОЛЗУНКИ ────────────────────────────────────────────────────────
-// Стандартный input[type=range] в WebView ВКонтакте на Android
-// иногда «проглатывает» движение пальца. Этот блок реализует
-// альтернативную обработку через touch-события напрямую.
-(function () {
-  let activeSlider = null, startX = 0, startVal = 0;
+/* ══ КОНСТАНТЫ ═══════════════════════════════════════════════════════ */
+const RHO_W = 1000;
+const SOIL = {
+  sand:       { rho: 1700, kf: 1.00 },
+  sandcement: { rho: 1850, kf: 1.00 },
+  loam:       { rho: 1800, kf: 0.90 },
+  clay:       { rho: 1900, kf: 0.85 },
+  fluid:      { rho: 1500, kf: 0.25 },
+};
+const ANCHOR = { none: 0, straps: 80, belt: 180 };
 
-  function getSliderVal(slider, dx) {
-    const min = +slider.min || 0;
-    const max = +slider.max || 1;
-    const rect = slider.getBoundingClientRect();
-    const ratio = Math.min(1, Math.max(0, (startX - rect.left + dx) / rect.width));
-    const raw = min + ratio * (max - min);
-    const step = +slider.step || 0.01;
-    return Math.round(raw / step) * step;
+/* ══ СОСТОЯНИЕ ═══════════════════════════════════════════════════════ */
+let springActive = false, springRaf = null, springTime = 0;
+let currentAnchor = 'none';
+let waterPhase = 0, lastNet = 0, smoothOffset = 0;
+
+/* ══ DOM ════════════════════════════════════════════════════════════ */
+const $ = id => document.getElementById(id);
+const els = {
+  dBody:$('d-body'), hBody:$('h-body'), dNeck:$('d-neck'), hNeck:$('h-neck'),
+  vDb:$('v-db'), vHb:$('v-hb'), vDn:$('v-dn'), vHn:$('v-hn'),
+  ugv:$('ugv'), water:$('water'), base:$('base'), soilType:$('soilType'),
+  vUgv:$('val-ugv'), vWater:$('val-water'), vBase:$('val-base'),
+  resArch:$('res-arch'), resCorp:$('res-corp'), resWater:$('res-water'),
+  resSoil:$('res-soil'), resAnchor:$('res-anchor'), resNet:$('res-net'),
+  barArch:$('bar-arch'), barCorp:$('bar-corp'), barWater:$('bar-water'),
+  barSoil:$('bar-soil'), barAnchor:$('bar-anchor'), anchorRow:$('anchorRow'),
+  statusBox:$('statusBox'), statusK:$('statusK'),
+  statusTitle:$('statusTitle'), statusDesc:$('statusDesc'),
+  minSkirt:$('minSkirt'), springBtn:$('springBtn'),
+  mainC:$('mainCanvas'), gaugeC:$('gaugeCanvas'),
+};
+const ctx  = els.mainC.getContext('2d');
+const gctx = els.gaugeC.getContext('2d');
+
+/* ══ УПРАВЛЕНИЕ ══════════════════════════════════════════════════════ */
+function toggleSpring() {
+  springActive = !springActive;
+  els.springBtn.classList.toggle('active', springActive);
+  els.springBtn.textContent = springActive ? '⏹ Остановить' : '🌊 Симуляция паводка';
+  if (springActive) animateSpring(); else cancelAnimationFrame(springRaf);
+}
+function animateSpring() {
+  const ht = +els.hBody.value + +els.hNeck.value;
+  springTime += 0.012;
+  els.ugv.value = Math.max(0, Math.min(ht + 0.2, ht / 2 + ht / 2 * Math.sin(springTime)));
+  calc();
+  springRaf = requestAnimationFrame(animateSpring);
+}
+function setPreset(t) {
+  if (springActive) toggleSpring();
+  if (t === 'barrel') {
+    els.dBody.value=1.50; els.hBody.value=1.50; els.dNeck.value=0.90; els.hNeck.value=0.50;
+    els.ugv.value=2.0; els.water.value=0; els.base.value=1.50; els.soilType.value='sand';
+    selectAnchorByVal('none');
+  } else {
+    els.dBody.value=1.27; els.hBody.value=1.50; els.dNeck.value=0.90; els.hNeck.value=0.50;
+    els.ugv.value=1.8; els.water.value=0.3; els.base.value=1.45; els.soilType.value='sandcement';
+    selectAnchorByVal('none');
+  }
+  calc();
+}
+function selectAnchor(el, v) {
+  document.querySelectorAll('.anchor-opt').forEach(e => e.classList.remove('selected'));
+  el.classList.add('selected'); currentAnchor = v; calc();
+}
+function selectAnchorByVal(v) {
+  document.querySelectorAll('.anchor-opt').forEach(e => {
+    const i = e.querySelector('input');
+    if (i.value === v) { e.classList.add('selected'); i.checked = true; }
+    else e.classList.remove('selected');
+  });
+  currentAnchor = v;
+}
+
+/* ══ РАСЧЁТ ══════════════════════════════════════════════════════════ */
+function calc() {
+  const DB=+els.dBody.value, HB=+els.hBody.value;
+  const DN=+els.dNeck.value, HN=+els.hNeck.value;
+  const HT = HB + HN;
+  els.base.min = DB;
+  if (+els.base.value < DB) els.base.value = DB;
+  els.ugv.max   = HT + 0.5;
+  els.water.max = HT;
+
+  const ugv=+els.ugv.value, water=+els.water.value, base=+els.base.value;
+  const soil = SOIL[els.soilType.value];
+
+  els.vDb.textContent    = DB.toFixed(2);
+  els.vHb.textContent    = HB.toFixed(2);
+  els.vDn.textContent    = DN.toFixed(2);
+  els.vHn.textContent    = HN.toFixed(2);
+  els.vUgv.textContent   = ugv.toFixed(2)   + ' м';
+  els.vWater.textContent = water.toFixed(2) + ' м';
+  els.vBase.textContent  = base.toFixed(2)  + ' м';
+
+  const SB  = Math.PI * (DB/2)**2;
+  const SN  = Math.PI * (DN/2)**2;
+  const SBs = Math.PI * (base/2)**2;
+  const SS  = Math.max(0, SBs - SB);
+
+  const areaPP = Math.PI*DB*HB + Math.PI*DN*HN + 2*SB;
+  const MASS_PP = Math.round(areaPP * 20);
+
+  let vSub = 0;
+  if      (ugv <= HB) vSub = SB * ugv;
+  else if (ugv <= HT) vSub = SB * HB + SN * (ugv - HB);
+  else                vSub = SB * HB + SN * HN;
+  const fArch = vSub * RHO_W;
+
+  let wVol = 0;
+  if (water <= HB) wVol = SB * water; else wVol = SB*HB + SN*(water-HB);
+  const fWater  = wVol * RHO_W;
+  const fSoil   = SS * HT * soil.rho * soil.kf;
+  const fAnchor = ANCHOR[currentAnchor];
+  const fDown   = MASS_PP + fWater + fSoil + fAnchor;
+  const net     = fArch - fDown;
+  const K       = fArch > 0 ? fDown / fArch : 99;
+  lastNet = net;
+
+  const fNeed = 1.5*fArch - MASS_PP - fWater - fAnchor;
+  let mSk = 'н/д';
+  if (fNeed <= 0) mSk = '≤ ' + DB.toFixed(2) + ' м';
+  else if (soil.kf > 0) {
+    const d = Math.sqrt(4 * (fNeed/(HT*soil.rho*soil.kf) + SB) / Math.PI);
+    mSk = d <= 3 ? d.toFixed(2) + ' м' : '> 3.0 м';
   }
 
-  document.addEventListener('touchstart', function (e) {
-    const t = e.target;
-    if (t.tagName !== 'INPUT' || t.type !== 'range') return;
-    activeSlider = t;
-    startX = e.touches[0].clientX;
-    startVal = +t.value;
-    // Не вызываем preventDefault здесь — иначе клик не сработает
-  }, { passive: true });
+  const maxF = Math.max(fArch, fDown, 500) * 1.05;
+  const pct  = f => Math.min(100, Math.round(f/maxF*100)) + '%';
+  els.resArch.textContent  = Math.round(fArch);
+  els.resCorp.textContent  = MASS_PP;
+  els.resWater.textContent = Math.round(fWater);
+  els.resSoil.textContent  = Math.round(fSoil);
+  els.resAnchor.textContent= fAnchor;
+  els.barArch.style.width  = pct(fArch);
+  els.barCorp.style.width  = pct(MASS_PP);
+  els.barWater.style.width = pct(fWater);
+  els.barSoil.style.width  = pct(fSoil);
+  els.barAnchor.style.width= pct(fAnchor);
+  els.anchorRow.style.display = fAnchor > 0 ? 'flex' : 'none';
+  els.resNet.textContent   = (net > 0 ? '↑ ' : '↓ ') + Math.abs(Math.round(net)) + ' кг';
+  els.minSkirt.textContent = mSk;
 
-  document.addEventListener('touchmove', function (e) {
-    if (!activeSlider) return;
-    e.preventDefault(); // блокируем прокрутку страницы пока тащим ползунок
-    const dx = e.touches[0].clientX - startX;
-    const newVal = getSliderVal(activeSlider, dx);
-    const clamped = Math.min(+activeSlider.max, Math.max(+activeSlider.min, newVal));
-    if (activeSlider.value !== String(clamped)) {
-      activeSlider.value = clamped;
-      activeSlider.dispatchEvent(new Event('input', { bubbles: true }));
-    }
-  }, { passive: false }); // passive:false обязателен чтобы preventDefault работал
+  if      (K < 1.0) setSt('red',   K, '🔴 ВСПЛЫВЁТ',  'Архимед победил. Отрыв труб.');
+  else if (K < 1.2) setSt('amber', K, '🟠 НА ГРАНИ',  'Может выдавить при паводке.');
+  else if (K < 1.5) setSt('cyan',  K, '🔵 ДОПУСТИМО', 'По нормативам, без запаса.');
+  else              setSt('green',  K, '🟢 СТАБИЛЬНО', 'Надёжно держит грунт.');
 
-  document.addEventListener('touchend', function () {
-    activeSlider = null;
-  }, { passive: true });
+  drawGauge(K);
+}
+
+function setSt(col, K, title, desc) {
+  const C = {
+    red:   ['var(--red)',   'var(--red-dim)',   'rgba(200,21,42,.45)'],
+    amber: ['var(--amber)', 'var(--amber-dim)', 'rgba(184,92,0,.45)'],
+    cyan:  ['var(--cyan)',  'var(--cyan-dim)',  'rgba(26,111,168,.45)'],
+    green: ['var(--green)', 'var(--green-dim)', 'rgba(26,122,64,.45)'],
+  }[col];
+  els.statusBox.style.cssText   = `border-color:${C[2]};background:${C[1]}`;
+  els.statusK.textContent       = K.toFixed(2);
+  els.statusK.style.color       = C[0];
+  els.statusTitle.textContent   = title;
+  els.statusTitle.style.color   = C[0];
+  els.statusDesc.textContent    = desc;
+}
+
+/* ══ МАНОМЕТР ════════════════════════════════════════════════════════ */
+function drawGauge(K) {
+  const c = gctx, W=210, H=108;
+  c.clearRect(0, 0, W, H);
+  const cx=105, cy=100, r=88, r2=62, Km=3.0, sA=Math.PI, eA=2*Math.PI;
+
+  [[0,.5,'#c8152a'],[.5,.75,'#e05020'],[.75,1,'#b85c00'],
+   [1,1.2,'#88cc00'],[1.2,1.5,'#1a6fa8'],[1.5,3,'#1a7a40']
+  ].forEach(([z0,z1,col]) => {
+    const a0=sA+(z0/Km)*Math.PI, a1=sA+(z1/Km)*Math.PI;
+    c.beginPath(); c.arc(cx,cy,r,a0,a1); c.arc(cx,cy,r2,a1,a0,true); c.closePath();
+    c.fillStyle=col; c.globalAlpha=.22; c.fill(); c.globalAlpha=1;
+    c.strokeStyle=col; c.lineWidth=1.5; c.beginPath(); c.arc(cx,cy,r+1,a0,a1); c.stroke();
+  });
+
+  c.beginPath(); c.arc(cx,cy,r2-2,sA,eA); c.arc(cx,cy,r+3,eA,sA,true);
+  c.fillStyle='#fdf9f2'; c.fill();
+
+  for (let k=0; k<=3; k+=.5) {
+    const a = sA + (k/Km)*Math.PI;
+    c.beginPath();
+    c.moveTo(cx+(r+4)*Math.cos(a), cy+(r+4)*Math.sin(a));
+    c.lineTo(cx+(r-3)*Math.cos(a), cy+(r-3)*Math.sin(a));
+    c.strokeStyle='#a09070'; c.lineWidth=1.5; c.stroke();
+    c.fillStyle='#6a5030'; c.font='bold 9px monospace'; c.textAlign='center';
+    c.fillText(k.toFixed(1), cx+(r2-12)*Math.cos(a), cy+(r2-12)*Math.sin(a)+3);
+  }
+
+  const Kc=Math.max(0,Math.min(Km,K)), nA=sA+(Kc/Km)*Math.PI;
+  const nC = K<1?'#c8152a':K<1.2?'#b85c00':K<1.5?'#1a6fa8':'#1a7a40';
+  c.save(); c.translate(cx,cy); c.rotate(nA);
+  c.beginPath(); c.moveTo(-5,0); c.lineTo(0,-(r-10)); c.lineTo(5,0);
+  c.fillStyle=nC; c.shadowBlur=6; c.shadowColor=nC; c.fill(); c.restore();
+
+  c.beginPath(); c.arc(cx,cy,8,0,2*Math.PI);
+  c.fillStyle='#fdf9f2'; c.strokeStyle=nC; c.lineWidth=2; c.fill(); c.stroke();
+}
+
+/* ══ РИСУНОК КОТЛОВАНА ═══════════════════════════════════════════════ */
+function drawM() {
+  const DB=+els.dBody.value, HB=+els.hBody.value;
+  const DN=+els.dNeck.value, HN=+els.hNeck.value, HT=HB+HN;
+  const ugv=+els.ugv.value, water=+els.water.value, base=+els.base.value;
+  const W=700, H=460; ctx.clearRect(0,0,W,H);
+  const SCX=130, SCY=130, cx=W/2, gY=390;
+  const surfY = gY - HT*SCY;
+
+  const tOfs = lastNet>0 ? -Math.min(lastNet/40,45) : Math.min(Math.abs(lastNet)/600,8);
+  smoothOffset += (tOfs - smoothOffset)*0.08;
+  const ofs=smoothOffset;
+  const wB=DB*SCX, wN=DN*SCX, wBs=base*SCX, hB=HB*SCY, hN=HN*SCY;
+  const yBs=gY+ofs, yBt=yBs-hB, yNt=yBt-hN;
+
+  // НЕБО
+  const skyG=ctx.createLinearGradient(0,0,0,surfY);
+  skyG.addColorStop(0,'#cce8f0'); skyG.addColorStop(1,'#eee8dc');
+  ctx.fillStyle=skyG; ctx.fillRect(0,0,W,surfY);
+  // Солнце
+  ctx.beginPath(); ctx.arc(70,52,22,0,2*Math.PI);
+  ctx.fillStyle='rgba(230,180,50,.8)'; ctx.fill();
+  ctx.strokeStyle='rgba(230,180,50,.3)'; ctx.lineWidth=3;
+  for(let i=0;i<8;i++){const a=i*Math.PI/4; ctx.beginPath(); ctx.moveTo(70+Math.cos(a)*30,52+Math.sin(a)*30); ctx.lineTo(70+Math.cos(a)*42,52+Math.sin(a)*42); ctx.stroke();}
+  // Облака
+  ctx.fillStyle='rgba(255,255,255,.75)';
+  ctx.beginPath(); ctx.arc(200,45,16,0,2*Math.PI); ctx.arc(222,40,21,0,2*Math.PI); ctx.arc(244,45,14,0,2*Math.PI); ctx.fill();
+  ctx.beginPath(); ctx.arc(490,72,12,0,2*Math.PI); ctx.arc(508,67,18,0,2*Math.PI); ctx.arc(526,72,11,0,2*Math.PI); ctx.fill();
+
+  // ГРУНТ
+  const soilG=ctx.createLinearGradient(0,surfY,0,H);
+  soilG.addColorStop(0,'#7d6347'); soilG.addColorStop(1,'#473623');
+  ctx.fillStyle=soilG; ctx.fillRect(0,surfY,W,H-surfY);
+  ctx.fillStyle='rgba(0,0,0,.06)';
+  for(let x=10;x<W;x+=15) for(let y=surfY+10;y<H;y+=15){ctx.beginPath();ctx.arc(x+(y%4)*3,y,1.5,0,2*Math.PI);ctx.fill();}
+
+  // КОТЛОВАН
+  const pitW=Math.max(wBs+90,330), pL=cx-pitW/2, pR=cx+pitW/2;
+  const pitG=ctx.createLinearGradient(0,surfY,0,gY);
+  pitG.addColorStop(0,'#a88e6a'); pitG.addColorStop(1,'#876d49');
+  ctx.fillStyle=pitG;
+  ctx.beginPath(); ctx.moveTo(pL-22,surfY); ctx.lineTo(pL,gY+15); ctx.lineTo(pR,gY+15); ctx.lineTo(pR+22,surfY); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle='rgba(50,30,15,.3)'; ctx.lineWidth=2; ctx.stroke();
+  ctx.fillStyle='rgba(255,255,255,.06)';
+  for(let x=pL;x<pR;x+=12) for(let y=surfY+10;y<gY;y+=14){ctx.beginPath();ctx.arc(x+(y%3)*4,y,2,0,2*Math.PI);ctx.fill();}
+
+  // ТРАВА
+  ctx.beginPath(); ctx.moveTo(0,surfY); ctx.lineTo(W,surfY);
+  ctx.strokeStyle='#7b8c42'; ctx.lineWidth=4; ctx.stroke();
+  ctx.strokeStyle='#687834'; ctx.lineWidth=1.5;
+  for(let i=10;i<W;i+=18){
+    if(i>cx-12&&i<cx+12) continue;
+    ctx.beginPath(); ctx.moveTo(i,surfY); ctx.lineTo(i-3,surfY-5-(i%3)); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(i+3,surfY); ctx.lineTo(i+5,surfY-4-(i%2)); ctx.stroke();
+  }
+
+  // УГВ
+  if(ugv>0){
+    const yU=gY-ugv*SCY;
+    const wG=ctx.createLinearGradient(0,yU,0,gY);
+    wG.addColorStop(0,'rgba(14,165,233,.22)'); wG.addColorStop(1,'rgba(14,165,233,.42)');
+    ctx.fillStyle=wG; ctx.fillRect(0,yU,W,H-yU);
+    waterPhase+=0.025; ctx.beginPath(); ctx.moveTo(0,yU);
+    for(let x=0;x<=W;x+=4) ctx.lineTo(x,yU+Math.sin(x*.04+waterPhase)*1.5+Math.sin(x*.07+waterPhase*1.3)*.8);
+    ctx.lineTo(W,gY); ctx.lineTo(0,gY); ctx.fillStyle='rgba(14,165,233,.09)'; ctx.fill();
+    ctx.setLineDash([6,4]); ctx.strokeStyle='rgba(14,165,233,.7)'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.moveTo(0,yU); ctx.lineTo(W,yU); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle='rgba(10,80,140,1)'; ctx.font='bold 13px Onest,sans-serif';
+    ctx.textAlign='left'; ctx.fillText(`УГВ: ${ugv.toFixed(2)} м`,14,yU-7);
+  }
+
+  ctx.fillStyle='rgba(50,30,15,.75)'; ctx.font='bold 12px Onest,sans-serif'; ctx.textAlign='right';
+  ctx.fillText('▼ Уровень земли',W-12,surfY-7);
+  ctx.setLineDash([2,4]); ctx.strokeStyle='rgba(50,30,15,.35)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(0,gY); ctx.lineTo(W,gY); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillText('Дно котлована',W-12,gY-5); ctx.textAlign='center';
+
+  // ЮБКА
+  if(base>DB+0.01){
+    ctx.fillStyle='#00c060'; ctx.fillRect(cx-wBs/2,yBs-10+ofs,wBs,10);
+    ctx.fillStyle='rgba(0,255,120,.15)'; ctx.fillRect(cx-wBs/2,yBs-10+ofs,wBs,3);
+  }
+
+  // КОРПУС
+  const bGr=ctx.createLinearGradient(cx-wB/2,0,cx+wB/2,0);
+  bGr.addColorStop(0,'#8aabb8'); bGr.addColorStop(.5,'#b8d0da'); bGr.addColorStop(1,'#7a9eae');
+  ctx.fillStyle=bGr; ctx.fillRect(cx-wB/2,yBt,wB,hB);
+  ctx.strokeStyle='#506878'; ctx.lineWidth=2; ctx.strokeRect(cx-wB/2,yBt,wB,hB);
+
+  // ВОДА ВНУТРИ
+  if(water>0.02){
+    let yW=yBs-water*SCY; if(yW<yNt) yW=yNt;
+    const iG=ctx.createLinearGradient(0,yW,0,yBs);
+    iG.addColorStop(0,'rgba(30,120,220,.42)'); iG.addColorStop(1,'rgba(20,70,180,.68)');
+    const hwB=Math.min(water,HB);
+    if(hwB>0){ctx.fillStyle=iG; ctx.fillRect(cx-wB/2+3,yBs-hwB*SCY,wB-6,hwB*SCY-2);}
+    if(water>HB){ctx.fillStyle=iG; ctx.fillRect(cx-wN/2+3,yW,wN-6,(water-HB)*SCY);}
+    const cw=water>HB?wN:wB;
+    ctx.strokeStyle='rgba(80,160,255,.5)'; ctx.lineWidth=1; ctx.beginPath();
+    for(let x=cx-cw/2+3;x<cx+cw/2-3;x++){const wy=yW+Math.sin(x*.12+waterPhase*1.5)*1.2; x===Math.floor(cx-cw/2+3)?ctx.moveTo(x,wy):ctx.lineTo(x,wy);}
+    ctx.stroke();
+  }
+
+  // ГОРЛОВИНА
+  const nGr=ctx.createLinearGradient(cx-wN/2,0,cx+wN/2,0);
+  nGr.addColorStop(0,'#7898a8'); nGr.addColorStop(.5,'#a0c0cc'); nGr.addColorStop(1,'#6a8898');
+  ctx.fillStyle=nGr; ctx.fillRect(cx-wN/2,yNt,wN,hN);
+  ctx.strokeStyle='#506878'; ctx.lineWidth=2; ctx.strokeRect(cx-wN/2,yNt,wN,hN);
+  ctx.fillStyle='#6a8898'; ctx.fillRect(cx-wN/2-10,yNt-13,wN+20,13); ctx.strokeRect(cx-wN/2-10,yNt-13,wN+20,13);
+
+  // СТРЕЛКИ
+  const fA=parseFloat(els.resArch.textContent)||0;
+  const fW=parseFloat(els.resWater.textContent)||0;
+  const fS=parseFloat(els.resSoil.textContent)||0, AS=0.015;
+  const arr=(x,y,up,len,col,lbl)=>{
+    if(len<4) return;
+    const eY=up?y-len:y+len;
+    ctx.strokeStyle=col; ctx.lineWidth=2.5; ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x,eY); ctx.stroke();
+    const d=up?-8:8; ctx.beginPath(); ctx.moveTo(x,eY); ctx.lineTo(x-6,eY-d); ctx.lineTo(x+6,eY-d); ctx.fillStyle=col; ctx.fill();
+    if(lbl){ctx.font='bold 13px monospace'; ctx.textAlign='center'; ctx.fillStyle=col; ctx.fillText(lbl,x,up?eY-9:eY+17);}
+  };
+  if(fA>10) arr(cx-wB/2-34,yBs,true,Math.min(fA*AS,115),'#1a6fa8',Math.round(fA)+' кг');
+  if(fW>10) arr(cx,yBt+20,false,Math.min(fW*AS,80),'#3050c0',Math.round(fW)+' кг');
+  if(fS>10&&base>DB+0.01){
+    const l=Math.min(fS*AS*.5,88);
+    arr(cx+wB/2+(wBs-wB)/4,yBs-28,false,l,'#1a7a40',Math.round(fS)+' кг');
+    arr(cx-wB/2-(wBs-wB)/4,yBs-28,false,l,'#1a7a40','');
+  }
+
+  // РАЗМЕР
+  ctx.beginPath(); ctx.strokeStyle='rgba(50,30,15,.4)'; ctx.lineWidth=1.5;
+  ctx.setLineDash([4,4]); ctx.moveTo(cx-wBs/2,yBs+24); ctx.lineTo(cx+wBs/2,yBs+24); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillStyle='rgba(50,30,15,.8)'; ctx.font='bold 13px monospace'; ctx.textAlign='center';
+  ctx.fillText(`⌀ ${base.toFixed(2)} м`,(cx-wBs/2+cx+wBs/2)/2,yBs+41);
+}
+
+/* ══ ЦИКЛ ════════════════════════════════════════════════════════════ */
+function loop(){ drawM(); requestAnimationFrame(loop); }
+calc(); loop();
+
+/* ══ TOUCH-ПОЛЗУНКИ ══════════════════════════════════════════════════
+   В WebView ВКонтакте (Android) стандартный input[range] иногда
+   уступает жест скроллу страницы. Перехватываем touch напрямую.
+   passive:false на touchmove — единственный способ вызвать preventDefault.
+   ════════════════════════════════════════════════════════════════════ */
+(function(){
+  let active=null, startX=0;
+  document.addEventListener('touchstart', e=>{
+    const t=e.target;
+    if(t.tagName!=='INPUT'||t.type!=='range') return;
+    active=t; startX=e.touches[0].clientX;
+  },{passive:true});
+  document.addEventListener('touchmove', e=>{
+    if(!active) return;
+    e.preventDefault();
+    const rect=active.getBoundingClientRect();
+    const ratio=Math.max(0,Math.min(1,(e.touches[0].clientX-rect.left)/rect.width));
+    const min=+active.min, max=+active.max, step=+active.step||0.01;
+    const val=Math.round((min+ratio*(max-min))/step)*step;
+    if(active.value!==String(val)){active.value=val; active.dispatchEvent(new Event('input',{bubbles:true}));}
+  },{passive:false});
+  document.addEventListener('touchend',()=>{active=null;},{passive:true});
 })();
 </script>
 </body>
