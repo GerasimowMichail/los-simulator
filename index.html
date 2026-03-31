@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ЛОС | Студийный Дашборд Устойчивости</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Onest:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #f5f0e8;
+  --panel:     #fdf9f2;
+  --surface:   #ede8dc;
+  --border:    #c8b89a;
+  --border2:   #d8ccb8;
+  --cyan:      #1a6fa8;
+  --cyan-dim:  rgba(26,111,168,0.10);
+  --green:     #1a7a40;
+  --green-dim: rgba(26,122,64,0.10);
+  --red:       #c8152a;
+  --red-dim:   rgba(200,21,42,0.10);
+  --amber:     #b85c00;
+  --amber-dim: rgba(184,92,0,0.10);
+  --text:      #2a1f12;
+  --text-dim:  #7a6248;
+  --mono:      'Space Mono', monospace;
+  --body-font: 'Onest', sans-serif;
+}
+
+body {
+  font-family: var(--body-font);
+  background: var(--bg);
+  color: var(--text);
+  height: 100vh;
+  padding: 10px 16px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+body::before {
+  content:''; position:fixed; inset:0; z-index:0;
+  background-image: linear-gradient(rgba(100,70,30,0.07) 1px, transparent 1px), linear-gradient(90deg, rgba(100,70,30,0.07) 1px, transparent 1px);
+  background-size: 40px 40px; pointer-events:none;
+}
+
+.wrap { position:relative; z-index:1; max-width:1600px; width:100%; margin:0 auto; height: 100%; display: flex; flex-direction: column; }
+
+header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:12px 20px; border: 1px solid var(--border); border-radius: 12px;
+  background: var(--panel); margin-bottom: 12px; flex-shrink: 0;
+}
+.logo-row { display:flex; align-items:center; gap:16px; }
+.logo-icon {
+  width:44px; height:44px; border-radius:8px;
+  background: linear-gradient(135deg, #1a5080, #1a6fa8);
+  display:flex; align-items:center; justify-content:center;
+  font-size:24px; flex-shrink:0; box-shadow: 0 0 12px rgba(26,111,168,0.25);
+}
+.logo-text h1 { font-size:19px; font-weight:800; letter-spacing:-0.3px; line-height:1; }
+.logo-text p  { font-size:13px; color:var(--text-dim); margin-top:4px; }
+.spring-badge {
+  display:flex; align-items:center; gap:6px;
+  background: var(--red-dim); border: 1px solid var(--red);
+  border-radius:6px; padding:6px 12px;
+  font-size:13px; font-weight:700; color:var(--red);
+  animation: pulse-red 2s ease-in-out infinite;
+}
+@keyframes pulse-red { 0%,100% { box-shadow:0 0 0 0 rgba(255,51,85,0.4); } 50% { box-shadow:0 0 0 6px rgba(255,51,85,0); } }
+
+.main { 
+  display:grid; gap:12px; 
+  grid-template-columns: 340px 1fr 340px; 
+  flex-grow: 1; min-height: 0;
+}
+
+.card {
+  background:var(--panel); border:1px solid var(--border);
+  border-radius:12px; padding:16px; display:flex; flex-direction:column;
+}
+.card-title {
+  font-size:12px; font-weight:800; letter-spacing:1px; text-transform:uppercase;
+  color:var(--text-dim); margin-bottom:12px; padding-bottom:8px;
+  border-bottom:1px solid var(--border2);
+}
+
+.presets { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+.btn {
+  flex:1; padding:8px 12px; border-radius:6px; border:1px solid var(--border);
+  background:var(--surface); color:var(--text); font-family:var(--body-font);
+  font-size:14px; font-weight:700; cursor:pointer; transition:all .15s;
+}
+.btn.danger { border-color:var(--red); color:var(--red); }
+.btn.good   { border-color:var(--green); color:var(--green); }
+.btn.spring-btn { width:100%; margin-top:8px; background: linear-gradient(135deg,#f5e0e0,#eedada); border-color:var(--red); color:var(--red); font-size:14px;}
+.btn.spring-btn.active { box-shadow: 0 0 12px rgba(200,21,42,0.25); }
+
+.sliders { display:flex; flex-direction:column; gap:12px; }
+.slider-top { display:flex; justify-content:space-between; align-items:baseline; margin-bottom:4px; }
+.slider-top label { font-size:13px; color:var(--text-dim); font-weight: 600;}
+.slider-top span { font-family:var(--mono); font-size:14px; font-weight:700; }
+.slider-top span.cyan  { color:var(--cyan); }
+.slider-top span.green { color:var(--green); }
+.slider-top span.amber { color:var(--amber); }
+
+input[type="range"] { 
+  width:100%; height:8px; border-radius:4px; 
+  appearance:none; -webkit-appearance:none; 
+  background:var(--border2); outline:none; 
+  margin: 4px 0 8px 0;
+}
+input[type="range"]::-webkit-slider-thumb { 
+  -webkit-appearance:none; width:20px; height:20px; border-radius:50%; cursor:pointer; 
+  border: 3px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+input[type="range"]::-moz-range-thumb { 
+  width:20px; height:20px; border-radius:50%; cursor:pointer; 
+  border: 3px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+input[type="range"].cyan-track::-webkit-slider-thumb { background: var(--cyan); }
+input[type="range"].amber-track::-webkit-slider-thumb { background: var(--amber); }
+input[type="range"].green-track::-webkit-slider-thumb { background: var(--green); }
+input[type="range"].cyan-track::-moz-range-thumb { background: var(--cyan); }
+input[type="range"].amber-track::-moz-range-thumb { background: var(--amber); }
+input[type="range"].green-track::-moz-range-thumb { background: var(--green); }
+
+select { width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(--border); background:var(--surface); font-size:13px; font-weight:600; outline:none; margin-top:4px; }
+
+.gauge-wrap { position:relative; width:100%; margin:0 auto; }
+#gaugeCanvas { width:100%; height:auto; display:block; }
+
+.status-box { border-radius:10px; padding:10px 12px; border: 1px solid; margin-top:8px; }
+.status-box .status-k { font-family:var(--mono); font-size:28px; font-weight:700; float:right; line-height:1;}
+.status-box .status-title { font-size:15px; font-weight:800; margin-bottom:4px; }
+.status-box .status-desc  { font-size:11px; opacity:.9; line-height: 1.3;}
+
+.force-section { margin-top:8px; display:flex; flex-direction:column; gap:6px; flex-grow:1;}
+.force-row { display:flex; align-items:center; gap:8px; }
+.force-label { font-size:12px; color:var(--text-dim); width:120px; flex-shrink:0; font-weight:600;}
+.force-bar-wrap { flex:1; height:14px; border-radius:4px; background:var(--surface); position:relative; }
+.force-bar { height:100%; border-radius:4px; transition:width .4s; }
+.force-val { font-family:var(--mono); font-size:14px; width:55px; text-align:right; font-weight:700;}
+
+.net-row {
+  display:flex; justify-content:space-between; align-items:center;
+  padding:10px 14px; border-radius:8px; background:var(--surface); border:1px solid var(--border2); margin-top:auto;
+}
+.net-val { font-family:var(--mono); font-size:20px; font-weight:800; }
+
+.min-skirt-row {
+  display:flex; justify-content:space-between; align-items:center; padding:12px 14px; border-radius:8px;
+  background:var(--green-dim); border:2px solid rgba(26,122,64,0.3); font-size:14px; font-weight:600; margin-top:10px;
+}
+
+.canvas-card { padding:12px; display:flex; flex-direction:column; gap:8px; height: 100%; overflow: hidden;}
+#mainCanvas { width:100%; height:100%; border-radius:8px; border:1px solid var(--border2); object-fit: contain; background: #e8dfd0;}
+
+.legend { display:flex; flex-wrap:wrap; justify-content:center; gap:12px; font-size:13px; color:var(--text-dim); margin-top:6px; font-weight:500;}
+.legend-item { display:flex; align-items:center; gap:6px; }
+.legend-dot { width:14px; height:14px; border-radius:3px; }
+
+.anchor-opts { display:flex; flex-direction:column; gap:6px; margin-top:6px; }
+.anchor-opt {
+  display:flex; align-items:center; gap:10px; padding:8px 10px; border-radius:6px;
+  border:1px solid var(--border2); background:var(--surface); cursor:pointer; font-size:13px; font-weight:600;
+}
+.anchor-opt input { accent-color:var(--cyan); width: 16px; height: 16px; cursor: pointer;}
+.anchor-opt.selected { border-color:var(--cyan); background:var(--cyan-dim); }
+.anchor-opt .aw { font-family:var(--mono); font-size:13px; font-weight:700; color:var(--cyan); margin-left:auto; }
+
+.scroll-area { overflow-y: auto; padding-right: 4px; display: flex; flex-direction: column; gap: 12px; }
+.scroll-area::-webkit-scrollbar { width: 6px; }
+.scroll-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+</style>
+</head>
+
+<body>
+<div class="wrap">
+
+<header>
+  <div class="logo-row">
+    <div class="logo-icon">🚰</div>
+    <div class="logo-text">
+      <h1>ЛОС &mdash; Инженерный аудит</h1>
+      <p>Полипропилен Викулен &bull; Анализ нагрузок в сложных грунтах</p>
+    </div>
+  </div>
+  <div class="spring-badge">🌊 ВЕСНА — ЗОНА РИСКА</div>
+</header>
+
+<div class="main">
+
+  <div class="scroll-area">
+    <div class="card">
+      <div class="card-title">Конфигурация</div>
+      <div class="presets">
+        <button class="btn danger" onclick="setPreset('barrel')">🛢 Чужая бочка</button>
+        <button class="btn good" onclick="setPreset('skirt')">🛡 Наш ЛОСь</button>
+      </div>
+      <button class="btn spring-btn" id="springBtn" onclick="toggleSpring()">🌊 Симуляция паводка</button>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Габариты корпуса (м)</div>
+      <div class="sliders">
+        <div>
+          <div class="slider-top"><label>↔ Диаметр базы (D)</label><span class="cyan" id="v-d-body">—</span></div>
+          <input type="range" id="d-body" class="cyan-track" min="0.8" max="2.0" step="0.01" value="1.27" oninput="calc()">
+        </div>
+        <div>
+          <div class="slider-top"><label>↕ Высота базы (H)</label><span class="cyan" id="v-h-body">—</span></div>
+          <input type="range" id="h-body" class="cyan-track" min="1.0" max="2.5" step="0.05" value="1.50" oninput="calc()">
+        </div>
+        <div>
+          <div class="slider-top"><label>↔ Диаметр горл. (d)</label><span class="cyan" id="v-d-neck">—</span></div>
+          <input type="range" id="d-neck" class="cyan-track" min="0.6" max="1.5" step="0.01" value="0.90" oninput="calc()">
+        </div>
+        <div>
+          <div class="slider-top"><label>↕ Высота горл. (h)</label><span class="cyan" id="v-h-neck">—</span></div>
+          <input type="range" id="h-neck" class="cyan-track" min="0.2" max="1.0" step="0.05" value="0.50" oninput="calc()">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card canvas-card" style="margin:0;">
+    <div style="display:flex;justify-content:space-between; padding:0 4px; margin-bottom: 4px;">
+      <span style="font-size:13px;font-weight:800;color:var(--text-dim);letter-spacing:1px;text-transform:uppercase;">Инженерный Разрез: Земля и Котлован</span>
+    </div>
+    <canvas id="mainCanvas" width="600" height="550"></canvas>
+    <div class="legend">
+      <div class="legend-item"><div class="legend-dot" style="background:rgba(20,130,200,0.5)"></div>УГВ</div>
+      <div class="legend-item"><div class="legend-dot" style="background:rgba(20,70,180,0.70)"></div>Стоки</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#00c060"></div>Грунтозацеп</div>
+      <div class="legend-item"><div class="legend-dot" style="background:#7a9eae"></div>Корпус ПП</div>
+    </div>
+  </div>
+
+  <div class="scroll-area">
+    <div class="card" style="padding-bottom: 8px;">
+      <div class="card-title" style="margin-bottom: 8px;">Среда и Юбка</div>
+      <select id="soilType" onchange="calc()" style="margin-bottom:12px;">
+        <option value="sand">Песок (ρ = 1700 кг/м³)</option>
+        <option value="sandcement" selected>Пескоцемент (ρ=1850)</option>
+        <option value="loam">Суглинок (ρ = 1800 кг/м³)</option>
+        <option value="clay">Глина (ρ = 1900 кг/м³)</option>
+        <option value="fluid">🔴 Плывун (Сцепление ×0.3)</option>
+      </select>
+      <div class="sliders">
+        <div>
+          <div class="slider-top"><label>💧 УГВ</label><span class="cyan" id="val-ugv">—</span></div>
+          <input type="range" id="ugv" class="cyan-track" min="0" max="3" step="0.05" value="1.5" oninput="calc()">
+        </div>
+        <div>
+          <div class="slider-top"><label>🚿 Стоки внутри</label><span class="amber" id="val-water">—</span></div>
+          <input type="range" id="water" class="amber-track" min="0" max="2.5" step="0.05" value="0.5" oninput="calc()">
+        </div>
+        <div>
+          <div class="slider-top"><label>⚓ Диаметр юбки</label><span class="green" id="val-base">—</span></div>
+          <input type="range" id="base" class="green-track" min="0.8" max="2.0" step="0.01" value="1.45" oninput="calc()">
+        </div>
+      </div>
+      
+      <div class="card-title" style="margin-top:12px; margin-bottom:8px;">Доп. якорение</div>
+      <div class="anchor-opts" style="margin-top:0;">
+        <label class="anchor-opt selected" onclick="selectAnchor(this,'none')">
+          <input type="radio" name="anchor" value="none" checked><span>Без якоря</span><span class="aw">0</span>
+        </label>
+        <label class="anchor-opt" onclick="selectAnchor(this,'straps')">
+          <input type="radio" name="anchor" value="straps"><span>Стропы</span><span class="aw">+80 кг</span>
+        </label>
+        <label class="anchor-opt" onclick="selectAnchor(this,'belt')">
+          <input type="radio" name="anchor" value="belt"><span>Бетонный пояс</span><span class="aw">+180 кг</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="card" style="margin:0; gap:0;">
+      <div class="card-title">Запас прочности</div>
+      
+      <div class="gauge-wrap"><canvas id="gaugeCanvas" width="280" height="145"></canvas></div>
+      
+      <div class="status-box" id="statusBox">
+        <span class="status-k" id="statusK">—</span>
+        <div class="status-title" id="statusTitle">—</div>
+        <div class="status-desc" id="statusDesc">—</div>
+      </div>
+
+      <div style="font-size:12px;color:var(--text-dim);margin:12px 0 6px;font-weight:800;letter-spacing:1px;text-transform:uppercase;">Эпюры нагрузок</div>
+      
+      <div class="force-section">
+        <div class="force-row">
+          <div class="force-label">↑ Выталкивание</div>
+          <div class="force-bar-wrap"><div class="force-bar" id="bar-arch" style="background:#1a6fa8;width:0%"></div></div>
+          <div class="force-val" style="color:var(--cyan)" id="res-arch">0</div>
+        </div>
+        <div class="force-row">
+          <div class="force-label">↓ Масса пластика</div>
+          <div class="force-bar-wrap"><div class="force-bar" id="bar-corp" style="background:#4a7090;width:0%"></div></div>
+          <div class="force-val" style="color:#6090c0" id="res-corp">150</div>
+        </div>
+        <div class="force-row">
+          <div class="force-label">↓ Масса стоков</div>
+          <div class="force-bar-wrap"><div class="force-bar" id="bar-water" style="background:#b88c00;width:0%"></div></div>
+          <div class="force-val" style="color:var(--amber)" id="res-water">0</div>
+        </div>
+        <div class="force-row">
+          <div class="force-label">↓ Прижим грунта</div>
+          <div class="force-bar-wrap"><div class="force-bar" id="bar-soil" style="background:#1a7a40;width:0%"></div></div>
+          <div class="force-val" style="color:var(--green)" id="res-soil">0</div>
+        </div>
+        <div class="force-row" id="anchorRow" style="display:none">
+          <div class="force-label">↓ Якорь</div>
+          <div class="force-bar-wrap"><div class="force-bar" id="bar-anchor" style="background:#8c4a10;width:0%"></div></div>
+          <div class="force-val" style="color:#c08040" id="res-anchor">0</div>
+        </div>
+      </div>
+
+      <div class="net-row" style="margin-top:12px;">
+        <span style="font-size:14px; font-weight:700; color:var(--text-dim);">Результирующая</span>
+        <span class="net-val" id="res-net">0 кг</span>
+      </div>
+
+      <div class="min-skirt-row">
+        <span>Мин. юбка (K=1.5):</span>
+        <span style="font-family:var(--mono); font-weight:800; font-size:18px; color:var(--green);" id="minSkirt">— м</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+</div>
+
+<script>
+const RHO_W = 1000;
+const SOIL = {
+  sand: {rho:1700, kf:1.0, l:'Песок'}, sandcement: {rho:1850, kf:1.0, l:'Пескоцемент'},
+  loam: {rho:1800, kf:0.9, l:'Суглинок'}, clay: {rho:1900, kf:0.85, l:'Глина'},
+  fluid: {rho:1500, kf:0.25, l:'Плывун'}
+};
+const ANCHOR = { none:0, straps:80, belt:180, slab:620 };
+
+let springActive = false, springRaf = null, springTime = 0, currentAnchor = 'none';
+let waterPhase = 0, lastNet = 0, smoothOffset = 0;
+
+const els = {
+  dBody: document.getElementById('d-body'), hBody: document.getElementById('h-body'),
+  dNeck: document.getElementById('d-neck'), hNeck: document.getElementById('h-neck'),
+  vDBody: document.getElementById('v-d-body'), vHBody: document.getElementById('v-h-body'),
+  vDNeck: document.getElementById('v-d-neck'), vHNeck: document.getElementById('v-h-neck'),
+  ugv: document.getElementById('ugv'), water: document.getElementById('water'), base: document.getElementById('base'),
+  soilType: document.getElementById('soilType'), vUgv: document.getElementById('val-ugv'), vWater: document.getElementById('val-water'),
+  vBase: document.getElementById('val-base'), resArch: document.getElementById('res-arch'), resCorp: document.getElementById('res-corp'),
+  resWater: document.getElementById('res-water'), resSoil: document.getElementById('res-soil'), resAnchor: document.getElementById('res-anchor'),
+  resNet: document.getElementById('res-net'), barArch: document.getElementById('bar-arch'), barCorp: document.getElementById('bar-corp'),
+  barWater: document.getElementById('bar-water'), barSoil: document.getElementById('bar-soil'), barAnchor: document.getElementById('bar-anchor'),
+  anchorRow: document.getElementById('anchorRow'), statusBox: document.getElementById('statusBox'), statusK: document.getElementById('statusK'),
+  statusTitle: document.getElementById('statusTitle'), statusDesc: document.getElementById('statusDesc'), minSkirt: document.getElementById('minSkirt'),
+  springBtn: document.getElementById('springBtn'), mainC: document.getElementById('mainCanvas'), gaugeC: document.getElementById('gaugeCanvas'),
+};
+const ctx = els.mainC.getContext('2d'), gctx = els.gaugeC.getContext('2d');
+
+function toggleSpring(){
+  springActive = !springActive;
+  els.springBtn.classList.toggle('active', springActive);
+  els.springBtn.textContent = springActive ? '⏹ Остановить симуляцию' : '🌊 Симуляция паводка';
+  if(springActive) animateSpring(); else cancelAnimationFrame(springRaf);
+}
+function animateSpring(){
+  const H_TOTAL = +els.hBody.value + +els.hNeck.value;
+  springTime += 0.012; els.ugv.value = Math.max(0, Math.min(H_TOTAL+0.2, (H_TOTAL/2) + (H_TOTAL/2) * Math.sin(springTime)));
+  calc(); springRaf = requestAnimationFrame(animateSpring);
+}
+function setPreset(t){
+  if(springActive) toggleSpring();
+  if(t==='barrel'){ 
+    els.dBody.value=1.50; els.hBody.value=1.50; els.dNeck.value=0.90; els.hNeck.value=0.50;
+    els.ugv.value=2.0; els.water.value=0; els.base.value=1.50; els.soilType.value='sand'; selectAnchorByVal('none'); 
+  } else { 
+    els.dBody.value=1.27; els.hBody.value=1.50; els.dNeck.value=0.90; els.hNeck.value=0.50;
+    els.ugv.value=1.8; els.water.value=0.3; els.base.value=1.45; els.soilType.value='sandcement'; selectAnchorByVal('none'); 
+  }
+  calc();
+}
+function selectAnchor(l, v){ document.querySelectorAll('.anchor-opt').forEach(e=>e.classList.remove('selected')); l.classList.add('selected'); currentAnchor=v; calc(); }
+function selectAnchorByVal(v){ document.querySelectorAll('.anchor-opt').forEach(e=>{ const i=e.querySelector('input'); if(i.value===v){e.classList.add('selected');i.checked=true;}else e.classList.remove('selected'); }); currentAnchor=v; }
+
+function calc(){
+  const D_BODY = +els.dBody.value, H_BODY = +els.hBody.value;
+  const D_NECK = +els.dNeck.value, H_NECK = +els.hNeck.value;
+  const H_TOTAL = H_BODY + H_NECK;
+  
+  els.base.min = D_BODY;
+  if(+els.base.value < D_BODY) els.base.value = D_BODY;
+  
+  els.ugv.max = H_TOTAL + 0.5;
+  els.water.max = H_TOTAL;
+
+  const ugv = +els.ugv.value, water = +els.water.value, base = +els.base.value, soil = SOIL[els.soilType.value];
+  
+  els.vDBody.textContent = D_BODY.toFixed(2); els.vHBody.textContent = H_BODY.toFixed(2);
+  els.vDNeck.textContent = D_NECK.toFixed(2); els.vHNeck.textContent = H_NECK.toFixed(2);
+  els.vUgv.textContent = ugv.toFixed(2)+' м'; els.vWater.textContent = water.toFixed(2)+' м'; els.vBase.textContent = base.toFixed(2)+' м';
+  
+  const S_BODY = Math.PI*(D_BODY/2)**2;
+  const S_NECK = Math.PI*(D_NECK/2)**2;
+  const sBase = Math.PI*(base/2)**2, sSkirt = Math.max(0, sBase-S_BODY);
+  
+  const areaTotal = Math.PI*D_BODY*H_BODY + Math.PI*D_NECK*H_NECK + 2*S_BODY;
+  const MASS_PP = Math.round(areaTotal * 20); 
+
+  let vSub = 0;
+  if(ugv<=H_BODY) vSub = S_BODY*ugv; else if(ugv<=H_TOTAL) vSub = S_BODY*H_BODY + S_NECK*(ugv-H_BODY); else vSub = S_BODY*H_BODY + S_NECK*H_NECK;
+  
+  const fArch = vSub*RHO_W;
+  let waterVol = 0;
+  if(water<=H_BODY) waterVol = S_BODY*water; else waterVol = S_BODY*H_BODY + S_NECK*(water-H_BODY);
+  
+  const fWater = waterVol*RHO_W; 
+  const fSoil = sSkirt*H_TOTAL*soil.rho*soil.kf;
+  const fAnchor = ANCHOR[currentAnchor];
+  
+  const fDown = MASS_PP + fWater + fSoil + fAnchor;
+  const netForce = fArch - fDown;
+  const K = fArch>0 ? fDown/fArch : 99; lastNet = netForce;
+
+  const fReq = 1.5*fArch, fSneed = fReq - MASS_PP - fWater - fAnchor;
+  let mSk = 'н/д';
+  if(fSneed>0 && soil.kf>0){ const d = Math.sqrt(4*(fSneed/(H_TOTAL*soil.rho*soil.kf)+S_BODY)/Math.PI); mSk = d<=3.0 ? d.toFixed(2) : '> 3.0'; }
+  else if(fSneed<=0) mSk = '≤ ' + D_BODY.toFixed(2);
+
+  const maxF = Math.max(fArch, fDown, 500)*1.05, pct = f => Math.min(100, Math.round(f/maxF*100))+'%';
+  els.resArch.textContent=Math.round(fArch); els.resCorp.textContent=MASS_PP; els.resWater.textContent=Math.round(fWater); els.resSoil.textContent=Math.round(fSoil); els.resAnchor.textContent=fAnchor;
+  els.barArch.style.width=pct(fArch); els.barCorp.style.width=pct(MASS_PP); els.barWater.style.width=pct(fWater); els.barSoil.style.width=pct(fSoil); els.barAnchor.style.width=pct(fAnchor);
+  els.anchorRow.style.display = fAnchor>0 ? 'flex' : 'none';
+  els.resNet.textContent = (netForce>0?'↑ ':'↓ ') + Math.abs(Math.round(netForce))+' кг'; 
+  els.minSkirt.textContent = mSk + (mSk==='н/д'?'':' м');
+
+  if(K<1.0) setSt('red',K,'🔴 ВСПЛЫВЁТ','Архимед победил. Отрыв труб.');
+  else if(K<1.2) setSt('amber',K,'🟠 НА ГРАНИ','Может выдавить при паводке.');
+  else if(K<1.5) setSt('cyan',K,'🔵 ДОПУСТИМО','По нормативам, но без запаса.');
+  else setSt('green',K,'🟢 СТАБИЛЬНО','Надежно зафиксировано грунтом.');
+  drawG(K);
+}
+
+function setSt(col,K,t,d){
+  const c = {red:['var(--red)','var(--red-dim)','rgba(200,21,42,0.5)'], amber:['var(--amber)','var(--amber-dim)','rgba(184,92,0,0.5)'], cyan:['var(--cyan)','var(--cyan-dim)','rgba(26,111,168,0.5)'], green:['var(--green)','var(--green-dim)','rgba(26,122,64,0.5)']}[col];
+  els.statusBox.style.cssText = `border-color:${c[2]};background:${c[1]};`; els.statusK.textContent=K.toFixed(2); els.statusK.style.color=c[0];
+  els.statusTitle.textContent=t; els.statusTitle.style.color=c[0]; els.statusDesc.textContent=d;
+}
+
+function drawG(K){
+  const c=gctx; c.clearRect(0,0,280,145); const cx=140, cy=130, r=105, r2=75, sA=Math.PI, eA=2*Math.PI, Km=3.0;
+  [[0,0.5,'#c8152a'],[0.5,0.75,'#e05020'],[0.75,1.0,'#b85c00'],[1.0,1.2,'#88cc00'],[1.2,1.5,'#1a6fa8'],[1.5,3.0,'#1a7a40']].forEach(([z0,z1,col])=>{
+    const a0=sA+(z0/Km)*Math.PI, a1=sA+(z1/Km)*Math.PI; c.beginPath(); c.arc(cx,cy,r,a0,a1); c.arc(cx,cy,r2,a1,a0,true);
+    c.fillStyle=col; c.globalAlpha=0.25; c.fill(); c.globalAlpha=1; c.strokeStyle=col; c.lineWidth=2; c.beginPath(); c.arc(cx,cy,r+2,a0,a1); c.stroke();
+  });
+  c.beginPath(); c.arc(cx,cy,r2-2,sA,eA); c.arc(cx,cy,r+4,eA,sA,true); c.fillStyle='#fdf9f2'; c.fill();
+  for(let k=0;k<=3;k+=0.5){
+    const a=sA+(k/Km)*Math.PI; c.beginPath(); c.moveTo(cx+(r+6)*Math.cos(a),cy+(r+6)*Math.sin(a)); c.lineTo(cx+(r-4)*Math.cos(a),cy+(r-4)*Math.sin(a));
+    c.strokeStyle='#a09070'; c.lineWidth=1.5; c.stroke(); c.fillStyle='#6a5030'; c.font='bold 11px monospace'; c.textAlign='center'; c.fillText(k.toFixed(1),cx+(r2-16)*Math.cos(a),cy+(r2-16)*Math.sin(a)+4);
+  }
+  const nA=sA+(Math.min(Km,Math.max(0,K))/Km)*Math.PI, nC = K<1?'#c8152a':K<1.2?'#b85c00':K<1.5?'#1a6fa8':'#1a7a40';
+  c.save(); c.translate(cx,cy); c.rotate(nA); c.beginPath(); c.moveTo(-6,0); c.lineTo(0,-(r-10)); c.lineTo(6,0); c.fillStyle=nC; c.fill(); c.restore();
+  c.beginPath(); c.arc(cx,cy,10,0,2*Math.PI); c.fillStyle='#fdf9f2'; c.strokeStyle=nC; c.lineWidth=2; c.fill(); c.stroke();
+}
+
+function drawM(){
+  const D_BODY = +els.dBody.value, H_BODY = +els.hBody.value;
+  const D_NECK = +els.dNeck.value, H_NECK = +els.hNeck.value;
+  const H_TOTAL = H_BODY + H_NECK;
+  const ugv=+els.ugv.value, water=+els.water.value, base=+els.base.value;
+  
+  const W=600, H=550; ctx.clearRect(0,0,W,H);
+  
+  const SCX=120, SCY=120, cx=W/2, gY=480; 
+  const surfY = gY - (H_TOTAL * SCY); 
+  
+  smoothOffset += ((lastNet>0 ? -Math.min(lastNet/40,45) : Math.min(Math.abs(lastNet)/600,8)) - smoothOffset)*0.08; const ofs=smoothOffset;
+  const wB=D_BODY*SCX, wN=D_NECK*SCX, wBs=base*SCX, hB=H_BODY*SCY, hN=H_NECK*SCY;
+  const yBs=gY+ofs, yBt=yBs-hB, yNt=yBt-hN;
+
+  // НЕБО
+  const skyG=ctx.createLinearGradient(0,0,0,surfY); 
+  skyG.addColorStop(0,'#d0e6ec'); skyG.addColorStop(1,'#f5f0e8'); 
+  ctx.fillStyle=skyG; ctx.fillRect(0,0,W,surfY);
+  
+  ctx.beginPath(); ctx.arc(80, 60, 24, 0, Math.PI*2);
+  ctx.fillStyle='rgba(230, 180, 50, 0.8)'; ctx.fill();
+  ctx.strokeStyle='rgba(230, 180, 50, 0.3)'; ctx.lineWidth=3;
+  for(let i=0; i<8; i++){ let a = i*Math.PI/4; ctx.beginPath(); ctx.moveTo(80+Math.cos(a)*32, 60+Math.sin(a)*32); ctx.lineTo(80+Math.cos(a)*45, 60+Math.sin(a)*45); ctx.stroke(); }
+  
+  ctx.fillStyle='rgba(255,255,255,0.7)';
+  ctx.beginPath(); ctx.arc(180, 50, 18, 0, Math.PI*2); ctx.arc(205, 45, 24, 0, Math.PI*2); ctx.arc(230, 50, 16, 0, Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(480, 80, 14, 0, Math.PI*2); ctx.arc(500, 75, 20, 0, Math.PI*2); ctx.arc(520, 80, 12, 0, Math.PI*2); ctx.fill();
+
+  // МАТЕРИКОВЫЙ ГРУНТ
+  const soilG=ctx.createLinearGradient(0,surfY,0,H); 
+  soilG.addColorStop(0,'#7d6347'); soilG.addColorStop(1,'#473623');
+  ctx.fillStyle=soilG; ctx.fillRect(0,surfY,W,H-surfY);
+  ctx.fillStyle='rgba(0,0,0,0.06)';
+  for(let x=10;x<W;x+=15) for(let y=surfY+10;y<H;y+=15){ ctx.beginPath();ctx.arc(x+(y%4)*3,y,1.5,0,2*Math.PI);ctx.fill(); }
+
+  // КОТЛОВАН
+  const pitW = Math.max(wBs + 80, 320);
+  const pL = cx - pitW/2, pR = cx + pitW/2;
+  const pitG=ctx.createLinearGradient(0,surfY,0,gY);
+  pitG.addColorStop(0,'#a88e6a'); pitG.addColorStop(1,'#876d49');
+  ctx.fillStyle=pitG;
+  ctx.beginPath(); ctx.moveTo(pL-25, surfY); ctx.lineTo(pL, gY+15); ctx.lineTo(pR, gY+15); ctx.lineTo(pR+25, surfY); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.07)';
+  for(let x=pL-10;x<pR+10;x+=12) for(let y=surfY+10;y<gY;y+=14){ ctx.beginPath();ctx.arc(x+(y%3)*4,y,2,0,2*Math.PI);ctx.fill(); }
+  
+  ctx.beginPath(); ctx.moveTo(pL-25, surfY); ctx.lineTo(pL, gY+15); ctx.lineTo(pR, gY+15); ctx.lineTo(pR+25, surfY);
+  ctx.strokeStyle='rgba(50,30,15,0.3)'; ctx.lineWidth=2; ctx.stroke();
+
+  // ТРАВА
+  ctx.beginPath(); ctx.moveTo(0, surfY); ctx.lineTo(W, surfY);
+  ctx.strokeStyle='#7b8c42'; ctx.lineWidth=4; ctx.stroke();
+  ctx.strokeStyle='#687834'; ctx.lineWidth=1.5;
+  for(let i=10; i<W; i+=18) {
+     if(i > cx-10 && i < cx+10) continue;
+     ctx.beginPath(); ctx.moveTo(i, surfY); ctx.lineTo(i-3, surfY-5-(i%3)); ctx.stroke();
+     ctx.beginPath(); ctx.moveTo(i+3, surfY); ctx.lineTo(i+5, surfY-4-(i%2)); ctx.stroke();
+  }
+
+  // УГВ
+  if(ugv>0){
+    const yU = gY - ugv*SCY;
+    const wG = ctx.createLinearGradient(0,yU,0,gY);
+    wG.addColorStop(0,'rgba(14, 165, 233, 0.25)'); wG.addColorStop(1,'rgba(14, 165, 233, 0.45)');
+    ctx.fillStyle=wG; ctx.fillRect(0, yU, W, H-yU);
+    
+    waterPhase+=0.025; ctx.beginPath(); ctx.moveTo(0,yU); 
+    for(let x=0;x<=W;x+=4) ctx.lineTo(x, yU+Math.sin(x*0.04+waterPhase)*1.5+Math.sin(x*0.07+waterPhase*1.3)*0.8);
+    ctx.lineTo(W,gY); ctx.lineTo(0,gY); ctx.fillStyle='rgba(14, 165, 233, 0.1)'; ctx.fill();
+    
+    ctx.setLineDash([6,4]); ctx.strokeStyle='rgba(14, 165, 233, 0.7)'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(0,yU); ctx.lineTo(W,yU); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle='rgba(10, 80, 140, 1)'; ctx.font='bold 15px Onest, sans-serif'; ctx.fillText(`УГВ: ${ugv.toFixed(2)} м`, 15, yU-8);
+  }
+  
+  ctx.fillStyle='rgba(50,30,15,0.8)'; ctx.font='bold 13px Onest, sans-serif'; ctx.textAlign='right';
+  ctx.fillText('▼ Уровень земли', W-15, surfY-8);
+  ctx.setLineDash([2,4]); ctx.strokeStyle='rgba(50,30,15,0.4)'; ctx.beginPath(); ctx.moveTo(0,gY); ctx.lineTo(W,gY); ctx.stroke(); ctx.setLineDash([]);
+  ctx.fillText('Дно котлована', W-15, gY-6);
+  ctx.textAlign='center';
+  
+  // ЮБКА
+  if(base>D_BODY+0.01){ ctx.fillStyle='#00c060'; ctx.fillRect(cx-wBs/2,yBs-10+ofs,wBs,10); ctx.fillStyle='rgba(0,255,120,0.15)'; ctx.fillRect(cx-wBs/2,yBs-10+ofs,wBs,3); }
+  
+  // КОРПУС
+  const bGr=ctx.createLinearGradient(cx-wB/2,0,cx+wB/2,0); bGr.addColorStop(0,'#8aabb8'); bGr.addColorStop(0.5,'#b8d0da'); bGr.addColorStop(1,'#7a9eae');
+  ctx.fillStyle=bGr; ctx.fillRect(cx-wB/2,yBt,wB,hB); ctx.strokeStyle='#506878'; ctx.lineWidth=2; ctx.strokeRect(cx-wB/2,yBt,wB,hB);
+  
+  // ВОДА ВНУТРИ
+  if(water>0.02){
+    let yW=yBs-water*SCY;
+    if (yW < yNt) yW = yNt; // Защита от переполнения выше горловины
+    const iG=ctx.createLinearGradient(0,yW,0,yBs); iG.addColorStop(0,'rgba(30,120,220,0.45)'); iG.addColorStop(1,'rgba(20,70,180,0.70)');
+    
+    // Рисуем воду в основном корпусе
+    const hWaterBody = Math.min(water, H_BODY);
+    if(hWaterBody > 0) {
+      ctx.fillStyle=iG; ctx.fillRect(cx-wB/2+3, yBs-hWaterBody*SCY, wB-6, hWaterBody*SCY-2);
+    }
+    // Рисуем воду в горловине если есть
+    if(water > H_BODY) {
+      const hWaterNeck = water - H_BODY;
+      ctx.fillStyle=iG; ctx.fillRect(cx-wN/2+3, yW, wN-6, hWaterNeck*SCY);
+    }
+    
+    // Волна
+    const currentW = water > H_BODY ? wN : wB;
+    ctx.strokeStyle='rgba(80,160,255,0.5)'; ctx.lineWidth=1; ctx.beginPath(); 
+    for(let x=cx-currentW/2+3; x<cx+currentW/2-3; x++){ 
+      const wy=yW+Math.sin(x*0.12+waterPhase*1.5)*1.2; 
+      x===Math.floor(cx-currentW/2+3)?ctx.moveTo(x,wy):ctx.lineTo(x,wy); 
+    } 
+    ctx.stroke();
+  }
+  
+  // ГОРЛОВИНА
+  const nGr=ctx.createLinearGradient(cx-wN/2,0,cx+wN/2,0); nGr.addColorStop(0,'#7898a8'); nGr.addColorStop(0.5,'#a0c0cc'); nGr.addColorStop(1,'#6a8898');
+  ctx.fillStyle=nGr; ctx.fillRect(cx-wN/2,yNt,wN,hN); ctx.strokeStyle='#506878'; ctx.lineWidth=2; ctx.strokeRect(cx-wN/2,yNt,wN,hN);
+  ctx.fillStyle='#6a8898'; ctx.fillRect(cx-wN/2-10,yNt-14,wN+20,14); ctx.strokeRect(cx-wN/2-10,yNt-14,wN+20,14);
+  
+  // СТРЕЛКИ
+  const fA=parseFloat(els.resArch.textContent)||0, fW=parseFloat(els.resWater.textContent)||0, fS=parseFloat(els.resSoil.textContent)||0, AS=0.015;
+  const arr=(x,y,u,l,c,t)=>{
+    if(l<4)return; const eY=u?y-l:y+l; ctx.strokeStyle=c; ctx.lineWidth=2.5; ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x,eY); ctx.stroke();
+    ctx.beginPath(); const d=u?-8:8; ctx.moveTo(x,eY); ctx.lineTo(x-6,eY-d); ctx.lineTo(x+6,eY-d); ctx.fillStyle=c; ctx.fill();
+    if(t){ ctx.font='bold 14px monospace'; ctx.textAlign='center'; ctx.fillText(t,x,u?eY-10:eY+18); }
+  };
+  if(fA>10) arr(cx-wB/2-35,yBs,true,Math.min(fA*AS,120),'#1a6fa8',Math.round(fA)+' кг');
+  if(fW>10) arr(cx,yBt+20,false,Math.min(fW*AS,80),'#3050c0',Math.round(fW)+' кг');
+  if(fS>10 && base>D_BODY+0.01){ const l=Math.min(fS*AS*0.5,90); arr(cx+wB/2+(wBs-wB)/4,yBs-30,false,l,'#1a7a40',Math.round(fS)+' кг'); arr(cx-wB/2-(wBs-wB)/4,yBs-30,false,l,'#1a7a40',''); }
+  
+  // РАЗМЕРЫ
+  const dL=(x1,y1,x2,y2,t)=>{
+    ctx.beginPath(); ctx.strokeStyle='rgba(50,30,15,0.4)'; ctx.lineWidth=1.5; ctx.setLineDash([4,4]); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); ctx.setLineDash([]);
+    ctx.fillStyle='rgba(50,30,15,0.8)'; ctx.font='bold 14px monospace'; ctx.textAlign='center'; ctx.fillText(t,(x1+x2)/2,y1+18);
+  };
+  dL(cx-wBs/2, yBs+25, cx+wBs/2, yBs+25, `⌀ ${base.toFixed(2)} м`);
+}
+function loop(){ drawM(); requestAnimationFrame(loop); }
+calc(); loop();
+</script>
+</body>
+</html>
