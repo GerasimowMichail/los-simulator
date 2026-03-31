@@ -177,6 +177,10 @@ select { width:100%; padding:8px 10px; border-radius:6px; border:1px solid var(-
 .scroll-area::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
 
 </style>
+  <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
+<script>
+  vkBridge.send('VKWebAppInit');
+</script>
 </head>
 
 <body>
